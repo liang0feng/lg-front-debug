@@ -315,6 +315,21 @@ img { max-width: 100%; }
   z-index: 10;
 }
 .conv { flex: 1; min-width: 0; }
+.conv-line { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.conv-line h1 { flex: 1 1 auto; min-width: 0; }
+.conv-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.conv-actions[hidden] { display: none; }
+.conv-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 24px; padding: 0 9px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--muted);
+  font-size: 11.5px; text-decoration: none; white-space: nowrap;
+  transition: border-color .13s, color .13s, background .13s;
+}
+.conv-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); text-decoration: none; }
+.conv-chip .icon { width: 13px; height: 13px; }
+.conv-chip[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
 .conv h1 {
   margin: 0; font-size: 15.5px; font-weight: 600; letter-spacing: .01em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -324,6 +339,23 @@ img { max-width: 100%; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .top-actions { display: flex; align-items: center; gap: 8px; }
+
+.sid-tip {
+  position: fixed; z-index: 75;
+  width: min(460px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); box-shadow: var(--shadow-pop);
+}
+.sid-tip[hidden] { display: none; }
+.sid-tip-head { margin-bottom: 4px; font-size: 10.5px; color: var(--muted-2); letter-spacing: .04em; }
+.sid-tip-url {
+  max-height: 72px; overflow: auto;
+  font: 12px/1.6 var(--mono); color: var(--ink-2);
+  word-break: break-all; user-select: all;
+}
+.sid-tip-url.empty { color: var(--muted-2); font-family: var(--font); }
+.sid-tip-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
 .status-chip {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 11.5px; color: var(--muted);
@@ -1220,6 +1252,11 @@ img { max-width: 100%; }
   }
   .side-row .ver { display: none; }
   .sess-actions { opacity: 1; position: static; transform: none; background: none; padding: 0; }
+}
+
+@media (max-width: 700px) {
+  .conv-chip .ca-label { display: none; }
+  .conv-chip { padding: 0 7px; }
 }
 
 @media (max-width: 420px) {

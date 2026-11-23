@@ -38,6 +38,7 @@
   <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
   <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.4a2.6 2.6 0 015.1.7c0 1.8-2.6 2-2.6 3.7"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8 8"/><path d="M20 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1h5"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></symbol>
 </svg>
 
@@ -89,7 +90,7 @@
         <button class="foot-btn slim" id="btnTheme">
           <svg class="icon" id="themeIcon"><use href="#i-moon"/></svg><span id="themeText">深色</span>
         </button>
-        <span class="ver" id="appVer">v1.0.4</span>
+        <span class="ver" id="appVer">v1.0.5</span>
       </div>
     </div>
   </aside>
@@ -100,7 +101,17 @@
         <svg class="icon"><use href="#i-menu"/></svg>
       </button>
       <div class="conv">
-        <h1 id="convTitle">新会话</h1>
+        <div class="conv-line">
+          <h1 id="convTitle">新会话</h1>
+          <div class="conv-actions" id="convActions" hidden>
+            <button class="conv-chip" id="btnCopySid" type="button" title="复制会话 ID">
+              <svg class="icon"><use href="#i-copy"/></svg><span class="ca-label">复制会话 ID</span>
+            </button>
+            <a class="conv-chip" id="btnOpenSid" target="_blank" rel="noopener noreferrer" aria-label="在灵基中查看会话">
+              <svg class="icon"><use href="#i-external"/></svg><span class="ca-label">在灵基中查看</span>
+            </a>
+          </div>
+        </div>
         <div class="conv-sub" id="convSub">尚未创建 · 发送后自动建会话</div>
       </div>
       <div class="top-actions">
@@ -318,6 +329,13 @@
 </div>
 
 <div class="pop" id="toolPop" role="dialog" aria-label="选择工具"></div>
+<div class="sid-tip" id="sidTip" hidden role="tooltip">
+  <div class="sid-tip-head">会话链接（点击「在灵基中查看」打开）</div>
+  <div class="sid-tip-url" id="sidTipUrl"></div>
+  <div class="sid-tip-actions">
+    <button class="link-btn" id="btnCopySidUrl" type="button">复制链接</button>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <div class="dialog" id="dialog" hidden role="dialog" aria-modal="true" aria-labelledby="dlgTitle">

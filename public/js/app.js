@@ -285,6 +285,7 @@ function renderConn() {
   hint.textContent = S.cfg && S.cfg.base ? S.cfg.base.replace(/^https?:\/\//, '') : '令牌 · 密钥 · 缓存';
   renderTokenLine();
   updateTopStatus();
+  updateSessionActions();
 }
 
 function renderTokenLine() {
@@ -624,6 +625,71 @@ function onEnvChanged() {
 
 /* ---------------- 标题 / 状态 ---------------- */
 
+function sessionUrl(sid) {
+  const base = normalizeBase((S.cfg || {}).base || '');
+  if (!base || !sid) return '';
+  return base + '/session/' + encodeURIComponent(String(sid));
+}
+
+function updateSessionActions() {
+  const wrap = $('#convActions');
+  if (!wrap) return;
+  const s = activeSession();
+  const sid = s && s.serverId ? String(s.serverId) : '';
+  wrap.hidden = !sid;
+
+  const url = sessionUrl(sid);
+  const copyId = $('#btnCopySid');
+  if (copyId) copyId.disabled = !sid;
+
+  const open = $('#btnOpenSid');
+  if (open) {
+    if (url) {
+      if (open.getAttribute('href') !== url) open.setAttribute('href', url);
+      open.removeAttribute('aria-disabled');
+    } else {
+      open.removeAttribute('href');
+      open.setAttribute('aria-disabled', 'true');
+    }
+    const label = url
+      ? '在灵基中查看会话：' + url
+      : '在灵基中查看会话（未配置服务地址或尚未创建会话）';
+    if (open.getAttribute('aria-label') !== label) open.setAttribute('aria-label', label);
+  }
+
+  const tipUrl = $('#sidTipUrl');
+  if (tipUrl) {
+    const text = url
+      ? url
+      : sid
+        ? '先在「连接设置」填写服务地址，才能生成会话链接'
+        : '当前还没有服务端会话 ID';
+    if (tipUrl.textContent !== text) tipUrl.textContent = text;
+    tipUrl.classList.toggle('empty', !url);
+  }
+  const copyUrl = $('#btnCopySidUrl');
+  if (copyUrl) copyUrl.disabled = !url;
+}
+
+function copySessionId() {
+  const s = activeSession();
+  const sid = s && s.serverId ? String(s.serverId) : '';
+  if (!sid) {
+    toast('当前还没有会话 ID', 'warn');
+    return;
+  }
+  copyText(sid);
+  const lab = $('#btnCopySid .ca-label');
+  if (lab) {
+    const old = lab.textContent;
+    lab.textContent = '已复制';
+    setTimeout(() => {
+      lab.textContent = old;
+    }, 1200);
+  }
+  toast('已复制会话 ID', 'ok');
+}
+
 function updateTitle() {
   const s = activeSession();
   const title = $('#convTitle');
@@ -641,6 +707,7 @@ function updateTitle() {
     sub.textContent = text;
   }
   updateTopStatus();
+  updateSessionActions();
 }
 
 function updateTopStatus() {
@@ -2087,6 +2154,65 @@ function bindEvents() {
     }
   }
 
+  // 会话 ID / 在灵基中查看
+  $('#btnCopySid').addEventListener('click', copySessionId);
+  const openSid = $('#btnOpenSid');
+  const sidTip = $('#sidTip');
+  let sidTipTimer = null;
+  const hideSidTipNow = () => {
+    clearTimeout(sidTipTimer);
+    if (sidTip) sidTip.hidden = true;
+  };
+  const showSidTip = () => {
+    if (!openSid || !sidTip) return;
+    clearTimeout(sidTipTimer);
+    updateSessionActions();
+    sidTip.hidden = false;
+    sidTip.style.left = '0px';
+    sidTip.style.top = '0px';
+    const r = openSid.getBoundingClientRect();
+    const tw = sidTip.offsetWidth;
+    const th = sidTip.offsetHeight;
+    const left = Math.max(10, Math.min(r.left, window.innerWidth - tw - 10));
+    let top = r.bottom + 8;
+    if (top + th > window.innerHeight - 10) top = Math.max(10, r.top - th - 8);
+    sidTip.style.left = left + 'px';
+    sidTip.style.top = top + 'px';
+  };
+  const hideSidTipSoon = () => {
+    clearTimeout(sidTipTimer);
+    sidTipTimer = setTimeout(() => {
+      if (sidTip) sidTip.hidden = true;
+    }, 140);
+  };
+  openSid.addEventListener('click', (e) => {
+    if (!openSid.getAttribute('href')) {
+      e.preventDefault();
+      toast('先在「连接设置」填写服务地址并创建会话', 'warn');
+    }
+    hideSidTipNow();
+  });
+  openSid.addEventListener('mouseenter', showSidTip);
+  openSid.addEventListener('mouseleave', hideSidTipSoon);
+  openSid.addEventListener('focus', showSidTip);
+  openSid.addEventListener('blur', hideSidTipSoon);
+  if (sidTip) {
+    sidTip.addEventListener('mouseenter', () => clearTimeout(sidTipTimer));
+    sidTip.addEventListener('mouseleave', hideSidTipSoon);
+  }
+  $('#btnCopySidUrl').addEventListener('click', () => {
+    const s = activeSession();
+    const url = sessionUrl(s && s.serverId);
+    if (!url) {
+      toast('暂无可用会话链接', 'warn');
+      return;
+    }
+    copyText(url);
+    toast('已复制会话链接', 'ok');
+  });
+  window.addEventListener('resize', hideSidTipNow);
+  document.addEventListener('scroll', hideSidTipNow, true);
+
   // 滚动
   const scroller = $('#chatScroll');
   scroller.addEventListener('scroll', () => {
@@ -2243,7 +2369,8 @@ function bindEvents() {
   // 快捷键
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (!$('#dialog').hidden) closeDialog(false);
+      if (sidTip && !sidTip.hidden) hideSidTipNow();
+      else if (!$('#dialog').hidden) closeDialog(false);
       else if ($('#toolPop').classList.contains('on')) toggleToolPop(false);
       else if ($('#drawer').classList.contains('on')) closeDrawer();
       else if ($('#app').classList.contains('side-open')) closeSidebar();

@@ -230,6 +230,7 @@ cacheKey = `lg.res.v1.${base}|${tenant}|${appId}|${subject}|${subType}`
 - 交互：`Ctrl/⌘+Enter` 发送、`Esc` 关闭浮层、会话搜索、重命名、删除、导出 Markdown/JSON、复制回答。
 - 动效遵循 `prefers-reduced-motion`。
 - 无障碍：焦点环、`aria-*`、键盘可达、对比度达标。
+- 会话级操作放在标题右侧：复制 `session_id`；「在灵基中查看」按 `BASE_URL + /session/{session_id}` 生成链接，悬停显示完整 URL 并提供复制。链接随连接设置与服务端会话 ID 变化实时更新，未建会话或未配置地址时禁用。
 
 ## 8. 可靠性与错误处理
 
