@@ -42,6 +42,39 @@ export class TurnEngine {
     this.runtimes = new Map();
     this.queue = [];
     this.active = 0;
+    this.recording = false;
+  }
+
+  /** 记录后续 SSE 原始事件（仅内存）。 */
+  setRecording(on) {
+    this.recording = !!on;
+  }
+
+  getSSELogText(sessionId) {
+    const rts = Array.from(this.runtimes.values())
+      .filter((rt) => rt.sseLog && rt.sseLog.length && (!sessionId || rt.sid === sessionId))
+      .sort((a, b) => a.sseLog[0].t - b.sseLog[0].t);
+    const lines = ['# 灵基对话台 · SSE 原始事件', '# ' + new Date().toISOString(), ''];
+    let count = 0;
+    rts.forEach((rt) => {
+      const t0 = rt.sseLog[0].t;
+      lines.push(
+        '# --- session=' + rt.sid + ' event_id=' + (rt.eventId || '') + ' events=' + rt.sseLog.length + ' ---'
+      );
+      rt.sseLog.forEach((x) => {
+        lines.push(': +' + (x.t - t0) + 'ms');
+        lines.push('data: ' + JSON.stringify(x.ev));
+        count++;
+      });
+      lines.push('');
+    });
+    return { text: lines.join('\n'), count, sessions: rts.length };
+  }
+
+  clearSSELog(sessionId) {
+    this.runtimes.forEach((rt) => {
+      if (!sessionId || rt.sid === sessionId) rt.sseLog = [];
+    });
   }
 
   /* ---------------- 运行时 ---------------- */
@@ -63,6 +96,8 @@ export class TurnEngine {
       queuePos: 0,
       persistTimer: null,
       authRetried: false,
+      lastAssistantMsgIds: new Set(),
+      lastAssistantMsgId: '',
     };
     this.runtimes.set(session.id, rt);
     return rt;
@@ -98,6 +133,7 @@ export class TurnEngine {
       channelState: rt.channelState,
       queuePos: rt.queuePos,
       taskId: rt.turn ? rt.turn.taskId : '',
+      polling: !!(rt.turn && rt.turn.poll && rt.turn.poll.active),
     };
   }
 
@@ -319,6 +355,8 @@ export class TurnEngine {
       eventId: rt.eventId,
       assistantMsgId: '',
       userMsgId: '',
+      assistantMsgIds: new Set(),
+      ignoredMsgIds: new Set(),
       busySeen: false,
       sawActivity: false,
       startedAt: now,
@@ -408,10 +446,21 @@ export class TurnEngine {
     clearTimeout(turn.watchdog);
     turn.watchdog = setTimeout(() => {
       if (turn.finished) return;
+      const ch = rt.channel;
+      // 通道健康 = 仍是 open 且最近 40s 内收到过任何事件（含心跳）
+      const channelHealthy =
+        !!ch && ch.isOpen && Date.now() - (ch.lastEventAt || 0) < 40000;
+
       if (!turn.sawActivity) {
-        this._startPoll(rt, turn, 'SSE 静默');
-      } else if (Date.now() - turn.lastEventAt > 12000) {
-        this._startPoll(rt, turn, 'SSE 长时间无声');
+        // 20s 还没有任何内容，或通道根本没连上：走轮询兜底
+        if (!channelHealthy || Date.now() - turn.startedAt > 20000) {
+          this._startPoll(rt, turn, 'SSE 静默');
+        }
+      } else if (!channelHealthy) {
+        this._startPoll(rt, turn, 'SSE 断线');
+      } else if (Date.now() - turn.lastEventAt > 60000) {
+        // 心跳正常但 60s 没有任何内容：做一次状态兜底（正常工具执行期不会触发）
+        this._startPoll(rt, turn, 'SSE 长时间无内容');
       }
       if (!turn.finished) this._armWatchdog(rt, turn);
     }, 5000);
@@ -422,6 +471,12 @@ export class TurnEngine {
   _onEvent(rt, ev) {
     const type = ev && ev.type;
     const p = (ev && ev.properties) || {};
+    if (this.recording) {
+      if (!rt.sseLog) rt.sseLog = [];
+      rt.sseLog.push({ t: Date.now(), ev });
+      // 单会话最多留 8000 条，避免长连接把内存吃满
+      if (rt.sseLog.length > 8000) rt.sseLog.splice(0, rt.sseLog.length - 8000);
+    }
     if (rt.channel) rt.channel.lastUsedAt = Date.now();
 
     if (rt.sseLogId && this.api.logger && rt.channel) {
@@ -464,10 +519,15 @@ export class TurnEngine {
       const info = p.info || {};
       if (info.role === 'user') {
         turn.userMsgId = info.id || turn.userMsgId;
+        if (info.id) turn.ignoredMsgIds.add(info.id);
         return;
       }
       if (info.role === 'assistant') {
-        if (!turn.assistantMsgId) turn.assistantMsgId = info.id || '';
+        if (info.id) {
+          // 一轮里可能有多条 assistant message（工具调用后重新进入生成），全部接受
+          turn.assistantMsgIds.add(info.id);
+          if (!turn.assistantMsgId) turn.assistantMsgId = info.id;
+        }
         if (info.model) turn.model = String(info.model);
         if (info.usage) turn.usage = info.usage;
         turn.sawActivity = true;
@@ -505,10 +565,11 @@ export class TurnEngine {
 
   _isAssistantPart(rt, turn, messageId) {
     if (!messageId) return true;
-    if (rt.lastAssistantMsgId && messageId === rt.lastAssistantMsgId) return false;
-    if (turn.userMsgId && messageId === turn.userMsgId) return false;
-    if (turn.assistantMsgId) return messageId === turn.assistantMsgId;
-    turn.assistantMsgId = messageId;
+    if (turn.ignoredMsgIds.has(messageId)) return false;
+    if (rt.lastAssistantMsgIds && rt.lastAssistantMsgIds.has(messageId)) return false;
+    // 不锁定单条 message：工具调用后服务端会用新的 messageID 继续输出正文
+    turn.assistantMsgIds.add(messageId);
+    if (!turn.assistantMsgId) turn.assistantMsgId = messageId;
     return true;
   }
 
@@ -537,8 +598,13 @@ export class TurnEngine {
     if (type === 'tool') {
       const tool = {
         id,
-        name: part.toolName || part.name || part.title || '工具调用',
-        state: part.state || part.status || '',
+        name: part.toolName || part.name || part.title || part.tool || part.toolId || '工具调用',
+        state:
+          typeof part.state === 'string'
+            ? part.state
+            : typeof part.status === 'string'
+              ? part.status
+              : '',
       };
       const idx = turn.tools.findIndex((t) => t.id === id);
       if (idx >= 0) turn.tools[idx] = Object.assign(turn.tools[idx], tool);
@@ -744,7 +810,8 @@ export class TurnEngine {
     detail = detail || {};
     turn.finished = true;
     turn.status = status;
-    if (turn.assistantMsgId) rt.lastAssistantMsgId = turn.assistantMsgId;
+    if (turn.assistantMsgId) rt.lastAssistantMsgIds.add(turn.assistantMsgId);
+    if (turn.assistantMsgIds) turn.assistantMsgIds.forEach((id) => rt.lastAssistantMsgIds.add(id));
     // 收尾时补一次统计，确保调试看板拿到完整事件数（而不是 500ms 节流时的快照）
     if (rt.sseLogId && this.api.logger && rt.channel) {
       this.api.logger.trackSSE(rt.sseLogId, rt.channel.stats);
@@ -921,6 +988,8 @@ export class TurnEngine {
       eventId: rt.eventId,
       assistantMsgId: '',
       userMsgId: '',
+      assistantMsgIds: new Set(),
+      ignoredMsgIds: new Set(),
       busySeen: false,
       sawActivity: false,
       startedAt: now,

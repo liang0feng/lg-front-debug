@@ -820,6 +820,7 @@ function openSession(id) {
   renderSessions();
   closeOverlays();
   Store.setMeta({ lastSession: id });
+  refreshDebugScope();
   if (cfgComplete() && s.serverId) {
     engine.prepare(s).catch(() => {});
   }
@@ -837,6 +838,7 @@ function newChat() {
   renderSessions();
   closeOverlays();
   Store.setMeta({ lastSession: '' });
+  refreshDebugScope();
   setTimeout(() => $('#input').focus(), 40);
 }
 
@@ -879,6 +881,7 @@ function onSessionIdChange(oldId, newId) {
   renderSessions();
   updateTitle();
   Store.setMeta({ lastSession: S.activeId });
+  refreshDebugScope();
 }
 
 function deleteSession(id) {
@@ -894,6 +897,7 @@ function deleteSession(id) {
     updateComposer();
   }
   renderSessions();
+  refreshDebugScope();
   toast('已删除本地会话记录（服务端上下文不受影响）');
 }
 
@@ -1329,8 +1333,13 @@ function updateComposer() {
 
   let hint = '';
   if (streaming) {
-    const t = engine.stateOf(s.id);
-    hint = t.channelState === 'open' ? 'SSE 收流中' : t.channelState === 'retrying' ? 'SSE 重连中，轮询兜底' : '正在执行';
+    hint = st.polling
+      ? '轮询兜底中'
+      : st.channelState === 'open'
+        ? 'SSE 收流中'
+        : st.channelState === 'retrying'
+          ? 'SSE 重连中'
+          : '正在执行';
   }
   $('#hint').textContent = hint;
   updateSendEnabled();
@@ -1345,10 +1354,36 @@ function updateSendEnabled() {
   $('#btnSend').disabled = disabled;
 }
 
+let _growMirror = null;
+
+/**
+ * 自适应输入框高度。
+ * 不用 textarea.scrollHeight：在后台标签页 / 程序化清空 value 后它可能不刷新，
+ * 会出现「发完消息输入框仍占 200px」的空洞。改用不可见镜像元素测内容高度。
+ */
 function autoGrow() {
   const t = $('#input');
-  t.style.height = 'auto';
-  t.style.height = Math.min(200, t.scrollHeight) + 'px';
+  if (!t) return;
+  if (!_growMirror) {
+    _growMirror = document.createElement('div');
+    _growMirror.setAttribute('aria-hidden', 'true');
+    _growMirror.style.cssText =
+      'position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;';
+    document.body.appendChild(_growMirror);
+  }
+  const cs = getComputedStyle(t);
+  const m = _growMirror.style;
+  m.width = t.clientWidth + 'px';
+  m.boxSizing = 'border-box';
+  m.font = cs.font;
+  m.lineHeight = cs.lineHeight;
+  m.padding = cs.padding;
+  m.letterSpacing = cs.letterSpacing;
+  m.whiteSpace = 'pre-wrap';
+  m.wordBreak = 'break-word';
+  _growMirror.textContent = (t.value || '') + ' ';
+  const h = Math.min(200, Math.max(26, _growMirror.scrollHeight));
+  t.style.height = h + 'px';
 }
 
 /* ---------------- 工具浮层 / 抽屉 ---------------- */
@@ -1477,6 +1512,11 @@ function renderDebug() {
   });
 }
 
+/** 会话切换后，「当前会话」过滤必须立即按新会话重算 */
+function refreshDebugScope() {
+  if (debug.open) renderDebug();
+}
+
 /* ---------------- 主题 ---------------- */
 
 function systemDark() {
@@ -1562,6 +1602,7 @@ function bindEvents() {
       updateTitle();
       updateComposer();
       renderSessions();
+      refreshDebugScope();
       toast('已清空本地会话记录');
     });
   });
@@ -1652,6 +1693,34 @@ function bindEvents() {
   $('#dbgSearch').addEventListener('input', function () {
     debug.query = this.value;
     renderDebug();
+  });
+  $('#dbgRecordSSE').addEventListener('change', function () {
+    engine.setRecording(this.checked);
+    Store.setMeta({ sseRecord: this.checked });
+    toast(
+      this.checked ? '已开启 SSE 原始记录（仅本页内存，刷新即清空）' : '已关闭 SSE 记录',
+      this.checked ? 'ok' : ''
+    );
+  });
+  $('#dbgCopySSE').addEventListener('click', () => {
+    const sid = debug.scope === 'current' && S.activeId ? S.activeId : '';
+    const r = engine.getSSELogText(sid);
+    if (!r.count) {
+      toast(
+        debug.scope === 'current' && S.activeId
+          ? '当前会话还没有 SSE 记录：先勾选「记录 SSE」，再复现场景（切到「全部会话」可看其它会话）'
+          : '还没有 SSE 记录：先勾选「记录 SSE」，再复现场景',
+        'warn'
+      );
+      return;
+    }
+    copyText(r.text);
+    toast('已复制 ' + r.count + ' 条 SSE 事件（' + r.sessions + ' 个会话）', 'ok');
+  });
+  $('#dbgClearSSE').addEventListener('click', () => {
+    const sid = debug.scope === 'current' && S.activeId ? S.activeId : '';
+    engine.clearSSELog(sid);
+    toast('已清空 SSE 记录');
   });
   debug.onChange(() => {
     if (debug.open) renderDebug();
@@ -1965,6 +2034,9 @@ function init() {
 
   // 恢复上次会话（只恢复已存在记录的会话）
   const meta = Store.getMeta();
+  engine.setRecording(!!meta.sseRecord);
+  const recCb = $('#dbgRecordSSE');
+  if (recCb) recCb.checked = !!meta.sseRecord;
   if (meta.lastSession && S.index.find((x) => x.id === meta.lastSession)) {
     openSession(meta.lastSession);
   } else {

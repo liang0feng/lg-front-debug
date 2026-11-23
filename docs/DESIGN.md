@@ -89,6 +89,7 @@ submitted ─┬─ SSE 有增量 ──────────────► 
 - **轮询节奏**：优先 `Retry-After`，否则 2s→3s→4.5s→6s→9s→13s→20s，最多 8 次；之后转入 30s 慢轮询，直到 5 分钟仍无终态 → 标记 `pending`。
 - **谁先到用谁**：SSE 先产生文本则轮询只补终态字段（artifacts/status），绝不覆盖已有流式文本；轮询先拿到 answer 而 SSE 无文本，则用 answer 收尾。
 - **幂等**：`session.idle`、`session.status(idle)`、`session.updated` 都可能重复；以 `turn.finished` 做一次性收尾，重复事件直接忽略。
+- **多 assistant message**：工具调用后服务端会用新的 `messageID` 继续生成，一轮内可能有多条 assistant message。轮次维护「本轮 assistant messageID 集合 + 上一轮忽略集合」，不锁定单条消息，避免工具调用后的正文被丢弃。
 - **快照优先**：`message.part.updated` 带 `time.end` 时以快照 `text` **覆盖**本地累积值；`message.part.delta` 只追加 `field == "text"` 的部分。
 - **reasoning 不混入回答**：`reasoning` 类 part 单独折叠展示，绝不拼进最终答案。
 
@@ -202,6 +203,7 @@ cacheKey = `lg.res.v1.${base}|${tenant}|${appId}|${subject}|${subType}`
 - 错误分类：网络 / 鉴权 / 参数 / 权限 / 限流 / 服务端 / 业务码；每类给可执行建议。
 - 业务码提示表覆盖签发与对话链路（5001093001、5001303001、5001053001、5001143001、5001033010、5001303003 等）。
 - 调试看板保留并增强：按会话/类型过滤、搜索、复制 cURL、SSE 事件统计（事件数、首末跨度、逐条/批量判断）、密钥默认打码。
+- **SSE 原始事件记录**：工具栏「记录 SSE」开关（偏好持久化），开启后把每条原始事件按 `{时间, 事件}` 存入本页内存（每会话上限 8000 条）；「复制 SSE 流」按当前过滤范围导出为带相对时间注释的 `data:` 文本，便于复现与离线分析。记录不落盘，刷新即清空。
 - 令牌单飞：多个会话同时需要令牌时只签一次。
 - 关闭页面时把进行中的部分输出与 `task_id` 落盘，下次打开可续查。
 

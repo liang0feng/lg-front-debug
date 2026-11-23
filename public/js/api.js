@@ -151,7 +151,8 @@ export class ApiClient {
     const reqBody = body === undefined ? null : isForm ? null : typeof body === 'string' ? body : JSON.stringify(body);
     const logId = this.logger
       ? this.logger.start({
-          label: label || path,
+          // 不传 label 时交给调试看板按路径推导中文名（签发令牌 / 发起对话 / 轮询结果…）
+          label: label || undefined,
           method,
           path,
           url,

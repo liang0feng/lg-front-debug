@@ -177,6 +177,45 @@ function playStream(sessionId, eventId, task) {
       },
     });
 
+    // [multi]：模拟工具执行后服务端用新的 assistant message 继续输出正文
+    if (/\[multi\]/.test(task.query)) {
+      const msgA2 = 'msg_a2_' + seq;
+      const text2 = 'prt_text2_' + seq;
+      emit(eventId, {
+        type: 'message.updated',
+        properties: {
+          info: {
+            id: msgA2, sessionID: sessionId, role: 'assistant',
+            model: 'work/expert/HSP_INF', time: { created: Date.now() },
+          },
+        },
+      });
+      emit(eventId, {
+        type: 'message.part.updated',
+        properties: {
+          sessionID: sessionId,
+          messageID: msgA2,
+          part: { id: text2, messageID: msgA2, type: 'text', text: '', time: { start: Date.now() } },
+        },
+      });
+      const second = '\n\n## 工具执行后的结论\n\n这是第二条 assistant message 里的正文，应当出现在同一条回答里。';
+      for (const c of second.match(/[\s\S]{1,6}/g) || []) {
+        await sleep(40);
+        emit(eventId, {
+          type: 'message.part.delta',
+          properties: { sessionID: sessionId, messageID: msgA2, partID: text2, field: 'text', delta: c },
+        });
+      }
+      emit(eventId, {
+        type: 'message.part.updated',
+        properties: {
+          sessionID: sessionId,
+          messageID: msgA2,
+          part: { id: text2, messageID: msgA2, type: 'text', text: second, time: { start: t0, end: Date.now() } },
+        },
+      });
+    }
+
     await sleep(120);
     tasks.get(task.taskId).completedAt = Date.now();
     emit(eventId, { type: 'session.idle', properties: { sessionID: sessionId } });
