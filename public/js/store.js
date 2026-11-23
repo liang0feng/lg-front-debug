@@ -195,6 +195,7 @@ function slimTool(t) {
     input: t.input || null,
     start: t.start || 0,
     end: t.end || 0,
+    answered: t.answered || undefined,
     // 工具输出可能很长，落盘截断，避免撑爆 localStorage
     output: out.length > 20000 ? out.slice(0, 20000) + '\n…（已截断）' : out,
   };

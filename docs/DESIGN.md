@@ -190,6 +190,16 @@ cacheKey = `lg.res.v1.${base}|${tenant}|${appId}|${subject}|${subType}`
 - 详情区展示参数 JSON 与输出；输出按 Markdown 渲染，可复制；过长的输出在展示与落盘时都截断。
 - 两层默认折叠。重建附加区时按 `data-key` 保留用户展开的明细与输出区滚动位置，避免流式刷新把用户正在看的内容收起。
 - 工具输出落盘截断 20000 字符，控制 localStorage 体积。
+
+### 5.2 交互澄清（AskUserQuestion）
+
+`AskUserQuestion` 的 `state.input.questions[]` 包含 `header / question / multiSelect / options[{label,description}]`。这类工具不能用 JSON 详情代替交互，因此在正文下方渲染独立卡片（工具组仍保持默认折叠）：
+
+- `multiSelect` 决定单选/多选；选项显示 label 与 description；额外提供「其他回答」自由输入。
+- 每道题至少有一个选择或自定义文本才允许提交。
+- 回答通道：OpenAPI 没有回答工具的接口，只有 `POST /chat`。因此提交时如果当前轮次仍在运行（工具等待中），先 `POST /stop` 结束等待轮次，确认后把选择格式化为新消息发送；`_submit` 对 `5001303001` 做一次 1s 退避重试，覆盖停止尚未落地的窗口。
+- 提交成功后工具上记录 `answered` 并随消息落盘，重新打开会话显示「已提交选择」而不是空白表单。
+- 会话标题只在首条提问时生成，后续澄清回答不覆盖标题。
 - 链接统一加 `rel="noopener noreferrer" target="_blank"`；HTML 标签一律转义，不开放原始 HTML。
 
 ## 6. 移动端

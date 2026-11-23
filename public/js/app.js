@@ -1059,20 +1059,30 @@ function createMessageEl(msg, session) {
 const TOOL_META = {
   websearch: { icon: 'i-search', label: '搜索' },
   webfetch: { icon: 'i-download', label: '获取' },
+  askuserquestion: { icon: 'i-help', label: '询问' },
 };
+
+function isAskTool(t) {
+  const name = String(t.tool || t.title || '').trim().toLowerCase();
+  return name === 'askuserquestion' || name === 'ask_user_question';
+}
 
 function toolDisplay(t) {
   const raw = String(t.tool || t.title || '').trim();
   const key = raw.toLowerCase().replace(/[^a-z]/g, '');
   const meta = TOOL_META[key] || null;
   const input = t.input || {};
-  const detail = meta
-    ? key === 'websearch'
-      ? input.query
-      : key === 'webfetch'
-        ? input.url
-        : ''
-    : input.query || input.url || input.prompt || '';
+  let detail = '';
+  if (meta) {
+    if (key === 'websearch') detail = input.query || '';
+    else if (key === 'webfetch') detail = input.url || '';
+    else if (key === 'askuserquestion') {
+      const q = Array.isArray(input.questions) ? input.questions[0] : null;
+      detail = q ? (q.header ? q.header + '：' : '') + (q.question || '') : '';
+    }
+  } else {
+    detail = input.query || input.url || input.prompt || '';
+  }
   return {
     icon: meta ? meta.icon : 'i-spark',
     label: meta ? meta.label : raw || '工具',
@@ -1183,6 +1193,159 @@ function toolGroupHtml(tools, streaming) {
   );
 }
 
+/* ---------------- 澄清卡片（AskUserQuestion） ---------------- */
+
+function askQuestions(t) {
+  const qs = t && t.input && Array.isArray(t.input.questions) ? t.input.questions : [];
+  return qs.filter((q) => q && typeof q === 'object' && (q.question || q.header));
+}
+
+function askCardHtml(t, streaming) {
+  if (t.answered && t.answered.text) {
+    return (
+      '<div class="ask-card answered" data-ask-tool="' + escapeHtml(t.id || '') + '">' +
+      '<div class="ask-head"><svg class="icon"><use href="#i-check"/></svg> 已提交选择</div>' +
+      '<div class="ask-answer">' + escapeHtml(t.answered.text).replace(/\n/g, '<br>') + '</div>' +
+      '</div>'
+    );
+  }
+  if (t.status !== 'running') return '';
+  const qs = askQuestions(t);
+  if (!qs.length) return '';
+  const tid = escapeHtml(t.id || '');
+  const body = qs
+    .map((q, qi) => {
+      const multi = !!q.multiSelect;
+      const name = 'ask-' + tid + '-' + qi;
+      const opts = (q.options || [])
+        .map((o, oi) => {
+          const label = typeof o === 'string' ? o : o.label || o.value || '';
+          const desc = typeof o === 'string' ? '' : o.description || '';
+          return (
+            '<label class="ask-opt">' +
+            '<input type="' + (multi ? 'checkbox' : 'radio') + '" name="' + name + '" value="' + oi + '">' +
+            '<span class="ao-main"><b>' + escapeHtml(label) + '</b>' +
+            (desc ? '<span>' + escapeHtml(desc) + '</span>' : '') +
+            '</span></label>'
+          );
+        })
+        .join('');
+      return (
+        '<div class="ask-q" data-q="' + qi + '">' +
+        (q.header ? '<span class="ask-h">' + escapeHtml(q.header) + '</span>' : '') +
+        '<p class="ask-text">' + escapeHtml(q.question || '') + '</p>' +
+        '<div class="ask-opts">' + opts + '</div>' +
+        '<input class="ask-custom" placeholder="其他回答（可选）">' +
+        '</div>'
+      );
+    })
+    .join('');
+  return (
+    '<div class="ask-card" data-ask-tool="' + tid + '">' +
+    '<div class="ask-head"><svg class="icon"><use href="#i-help"/></svg> 需要你确认</div>' +
+    body +
+    '<div class="ask-foot"><button class="btn primary sm" data-ask-submit disabled>提交选择</button>' +
+    '<span class="ask-note">' +
+    (streaming
+      ? '提交会先停止当前等待中的轮次，并把选择作为新消息发送'
+      : '提交后作为新消息发送') +
+    '</span></div>' +
+    '</div>'
+  );
+}
+
+function askCardsHtml(msg) {
+  return (msg.tools || [])
+    .filter((t) => isAskTool(t) && (t.answered || t.status === 'running'))
+    .map((t) => askCardHtml(t, msg.status === 'streaming'))
+    .join('');
+}
+
+function collectAskAnswers(card, tool) {
+  const qs = askQuestions(tool);
+  const out = [];
+  card.querySelectorAll('.ask-q').forEach((qEl, qi) => {
+    const q = qs[qi] || {};
+    const labels = Array.from(qEl.querySelectorAll('input:checked'))
+      .map((i) => {
+        const o = (q.options || [])[Number(i.value)];
+        return typeof o === 'string' ? o : o && (o.label || o.value);
+      })
+      .filter(Boolean);
+    const custom = qEl.querySelector('.ask-custom');
+    if (custom && custom.value.trim()) labels.push(custom.value.trim());
+    if (labels.length) {
+      out.push({ header: q.header || '', question: q.question || '', labels });
+    }
+  });
+  return out;
+}
+
+function formatAskAnswer(answers) {
+  return '我选择：\n' + answers
+    .map((a) => '【' + (a.header || '选择') + '】' + (a.question ? a.question + '\n→ ' : '') + a.labels.join('、'))
+    .join('\n');
+}
+
+function syncAskSelection(card) {
+  card.querySelectorAll('.ask-opt').forEach((l) => {
+    l.classList.toggle('on', !!l.querySelector('input:checked'));
+  });
+  const ok = Array.from(card.querySelectorAll('.ask-q')).every((qEl) => {
+    const checked = qEl.querySelector('input:checked');
+    const custom = qEl.querySelector('.ask-custom');
+    return !!checked || (custom && custom.value.trim());
+  });
+  const btn = card.querySelector('[data-ask-submit]');
+  if (btn) btn.disabled = !ok;
+}
+
+function findMessageByTool(session, toolId) {
+  if (!session) return null;
+  return (session.messages || []).find((m) => (m.tools || []).some((t) => String(t.id) === toolId)) || null;
+}
+
+async function submitAsk(toolId, card) {
+  const s = activeSession();
+  if (!s) return;
+  const msg = findMessageByTool(s, toolId);
+  const tool = msg && (msg.tools || []).find((t) => String(t.id) === toolId);
+  if (!tool) return;
+  const answers = collectAskAnswers(card, tool);
+  if (!answers.length) {
+    toast('请先选择或填写回答', 'warn');
+    return;
+  }
+  const text = formatAskAnswer(answers);
+  const st = engine.stateOf(s.id);
+  if (st.streaming) {
+    const ok = await dialogConfirm({
+      title: '提交澄清选择',
+      text: '当前轮次仍在等待工具输入。提交会先停止当前轮次，再把你的选择作为新消息发送。',
+      ok: '停止并提交',
+      danger: true,
+    });
+    if (!ok) return;
+    await engine.stop(s);
+    await new Promise((r) => setTimeout(r, 800));
+  }
+  const btn = card.querySelector('[data-ask-submit]');
+  if (btn) btn.disabled = true;
+  const input = $('#input');
+  input.value = text;
+  autoGrow();
+  updateSendEnabled();
+  const sent = await send();
+  if (!sent) {
+    if (btn) btn.disabled = false;
+    return;
+  }
+  tool.answered = { text, at: Date.now() };
+  Store.saveSession(s);
+  updateMessage(msg);
+  toast('已提交选择并继续对话', 'ok');
+}
+
 /** 重建附加区时保留用户已展开的 <details> 与内部滚动位置 */
 function setHtmlIfChanged(el, html) {
   if (!el || el._html === html) return;
@@ -1214,6 +1377,9 @@ function paintMessage(node, msg, session) {
   // 附加区：思考过程 / 工具在正文前；错误 / 产物在正文后
   const top = [];
   const bottom = [];
+  // 交互澄清卡片放在正文之后，突出提示
+  const asks = askCardsHtml(msg);
+  if (asks) bottom.push(asks);
   if (msg.reasoning) {
     top.push(
       '<details class="reasoning" data-key="reasoning"><summary>思考过程</summary><div class="md">' +
@@ -1379,21 +1545,21 @@ function currentPayload(query) {
 async function send() {
   const input = $('#input');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text) return false;
   if (!cfgComplete()) {
     openDrawer();
     toast('请先填写连接配置并获取令牌', 'err');
-    return;
+    return false;
   }
   const s = activeSession();
   const st = s ? engine.stateOf(s.id) : { streaming: false, queuePos: 0 };
   if (st.streaming) {
     toast('该会话正在执行，先停止或等它完成', 'warn');
-    return;
+    return false;
   }
   if (st.queuePos) {
     toast('该会话已在排队中', 'warn');
-    return;
+    return false;
   }
 
   const session = ensureActiveSession();
@@ -1402,9 +1568,11 @@ async function send() {
   autoGrow();
   updateSendEnabled();
 
+  let ok = false;
   try {
     const r = await engine.send(session, currentPayload(text));
     if (r && r.queued) toast('并发已满，已排队 · 第 ' + r.pos + ' 位', 'warn');
+    ok = true;
   } catch (e) {
     input.value = text;
     autoGrow();
@@ -1412,6 +1580,7 @@ async function send() {
     toast((e && e.code ? '[' + e.code + '] ' : '') + ((e && e.message) || '发送失败'), 'err');
   }
   updateComposer();
+  return ok;
 }
 
 async function stopActive() {
@@ -1928,6 +2097,12 @@ function bindEvents() {
 
   // 消息内操作（委托）
   $('#chat').addEventListener('click', (e) => {
+    const askSubmit = e.target.closest('[data-ask-submit]');
+    if (askSubmit) {
+      const card = askSubmit.closest('.ask-card');
+      if (card) submitAsk(card.dataset.askTool, card);
+      return;
+    }
     const copyCode = e.target.closest('[data-copy-code]');
     if (copyCode) {
       const code = copyCode.closest('.md-code').querySelector('code');
@@ -1984,6 +2159,17 @@ function bindEvents() {
       }
       return;
     }
+  });
+
+  // 澄清卡片：选择/自定义输入后启用提交
+  $('#chat').addEventListener('change', (e) => {
+    const card = e.target.closest('.ask-card');
+    if (card) syncAskSelection(card);
+  });
+  $('#chat').addEventListener('input', (e) => {
+    if (!e.target.classList.contains('ask-custom')) return;
+    const card = e.target.closest('.ask-card');
+    if (card) syncAskSelection(card);
   });
 
   // 问答示例

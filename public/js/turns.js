@@ -276,7 +276,9 @@ export class TurnEngine {
       throw new Error('该会话已在排队中，请稍候');
     }
     if (this.active >= this.maxConcurrent) {
-      if (!rt.session.renamed) rt.session.title = titleFrom(payload.query);
+      if (!rt.session.renamed && (!rt.session.title || rt.session.title === '新会话')) {
+        rt.session.title = titleFrom(payload.query);
+      }
       rt.session.updatedAt = Date.now();
       rt.queued = payload;
       this.queue.push(rt);
@@ -328,8 +330,8 @@ export class TurnEngine {
     };
     session.messages.push(userMsg);
     session.messages.push(botMsg);
-    if (!session.title || session.title === '新会话' || !session.renamed) {
-      if (!session.renamed) session.title = titleFrom(payload.query);
+    if (!session.renamed && (!session.title || session.title === '新会话')) {
+      session.title = titleFrom(payload.query);
     }
     session.updatedAt = now;
     if (session.pendingTask) {
@@ -431,6 +433,11 @@ export class TurnEngine {
         try {
           await rt.channel.restart(7000);
         } catch (err) { /* ignore */ }
+        return this._submit(rt, turn, payload, attempt + 1);
+      }
+      if (e && e.code === '5001303001' && attempt < 2) {
+        // 会话仍标记为运行中（例如刚停止等待中的工具、服务端尚未落地），短暂等待后重试
+        await new Promise((r) => setTimeout(r, 1000));
         return this._submit(rt, turn, payload, attempt + 1);
       }
       if (e && (e.status === 429 || e.code === '5001303003') && attempt < 1) {

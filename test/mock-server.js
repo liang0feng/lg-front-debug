@@ -22,6 +22,7 @@ const sessions = new Map();
 const streams = new Map(); // event_id -> res
 const tasks = new Map(); // task_id -> {query, sessionId, createdAt}
 const taskDropped = Object.create(null); // session_id -> true（[drop] 只摘一次）
+const sessionRunning = Object.create(null); // session_id -> true 有运行中的任务
 
 let seq = 0;
 const nextId = (p) => p + '_' + (++seq) + '_' + Date.now().toString(36);
@@ -286,8 +287,85 @@ function playStream(sessionId, eventId, task) {
 
     await sleep(120);
     tasks.get(task.taskId).completedAt = Date.now();
+    sessionRunning[sessionId] = false;
     emit(eventId, { type: 'session.idle', properties: { sessionID: sessionId } });
     emit(eventId, { type: 'session.status', properties: { sessionID: sessionId, status: { type: 'idle' } } });
+  })();
+}
+
+/** [ask]：返回一个等待用户回答的 AskUserQuestion 工具调用，不结束轮次 */
+function playAsk(sessionId, eventId, task) {
+  const msgA = 'msg_ask_' + seq;
+  const textId = 'prt_ask_text_' + seq;
+  const toolId = 'prt_ask_tool_' + seq;
+  (async () => {
+    emit(eventId, { type: 'session.status', properties: { sessionID: sessionId, status: { type: 'busy' } } });
+    emit(eventId, {
+      type: 'message.updated',
+      properties: {
+        info: {
+          id: msgA, sessionID: sessionId, role: 'assistant',
+          model: 'work/expert/HSP_INF', time: { created: Date.now() },
+        },
+      },
+    });
+    emit(eventId, {
+      type: 'message.part.updated',
+      properties: {
+        sessionID: sessionId,
+        messageID: msgA,
+        part: {
+          id: textId, messageID: msgA, type: 'text',
+          text: '正在加载数据查询能力，先确认可用的销售主题与本月口径。',
+          time: { start: Date.now(), end: Date.now() },
+        },
+      },
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    emit(eventId, {
+      type: 'message.part.updated',
+      properties: {
+        sessionID: sessionId,
+        messageID: msgA,
+        part: {
+          id: toolId, messageID: msgA, sessionID: sessionId, type: 'tool',
+          tool: 'AskUserQuestion', callID: 'call_mock_ask_1',
+          state: {
+            input: {
+              questions: [
+                {
+                  header: '数据主题',
+                  multiSelect: false,
+                  options: [
+                    {
+                      description: '覆盖市场活动→线索→商机→销售订单全链路，含订单头与明细，口径更完整',
+                      label: 'Hi-SalesOrders-jimmy（推荐）',
+                    },
+                    {
+                      description: '您自己工作空间下的销售订单主题，聚焦订单成交数据',
+                      label: '销售订单',
+                    },
+                  ],
+                  question: '本月销售数据要基于哪个主题口径来汇总？',
+                },
+                {
+                  header: '统计范围',
+                  multiSelect: true,
+                  options: [
+                    { description: '包含已关闭的订单', label: '含关闭订单' },
+                    { description: '仅统计本月新增', label: '仅本月新增' },
+                  ],
+                  question: '还需要包含哪些口径？（可多选）',
+                },
+              ],
+            },
+            status: 'running',
+            title: 'AskUserQuestion',
+            time: { start: Date.now() },
+          },
+        },
+      },
+    });
   })();
 }
 
@@ -364,11 +442,17 @@ const server = http.createServer(async (req, res) => {
       });
       return;
     }
+    if (sessionRunning[sid]) {
+      sendJSON(res, 409, { code: '5001303001', message: '该会话已有正在运行的任务' });
+      return;
+    }
     const taskId = 'task_' + (++seq) + '_' + Date.now().toString(36);
     const task = { taskId, sessionId: sid, eventId, query: body.query || '', createdAt: Date.now(), completedAt: 0 };
     tasks.set(taskId, task);
+    sessionRunning[sid] = true;
     ok(res, { task_id: taskId, session_id: sid, status: 'running', event_id: eventId }, 202);
-    if (!/[[]poll[\]]/.test(task.query)) playStream(sid, eventId, task);
+    if (/\[ask\]/.test(task.query)) playAsk(sid, eventId, task);
+    else if (!/[[]poll[\]]/.test(task.query)) playStream(sid, eventId, task);
     return;
   }
 
@@ -380,6 +464,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     const done = Date.now() - task.createdAt > 2500;
+    if (done) sessionRunning[task.sessionId] = false;
     const answer = '## 轮询兜底结果\n\nSSE 没有推送内容，本回答来自 `GET /task/{id}` 轮询。\n\n- 任务：`' + task.taskId + '`\n- 问题：' + task.query;
     ok(res, {
       task_id: task.taskId,
@@ -395,6 +480,7 @@ const server = http.createServer(async (req, res) => {
 
   const stopMatch = path.match(/^\/work\/openapi\/v1\/session\/([^/]+)\/stop$/);
   if (method === 'POST' && stopMatch) {
+    sessionRunning[stopMatch[1]] = false;
     ok(res, { session_id: stopMatch[1], status: 'stopped' });
     return;
   }
