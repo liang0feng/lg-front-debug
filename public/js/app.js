@@ -28,6 +28,8 @@ const S = {
   dlgResolve: null,
 };
 
+const PICK = { kind: '', items: [], active: -1, anchor: null };
+
 function cfgComplete() {
   const c = S.cfg || {};
   return !!(c.base && c.appId && c.secret && c.tenant);
@@ -434,13 +436,13 @@ function renderResources() {
   else if (st.lastError) status.textContent = '资源加载失败（详见连接设置）';
   else status.textContent = '模型 / 工具未加载';
 
-  // 选择项在刷新后可能已不存在
+  // 选择项在刷新后可能已不存在（仅在该资源确实拉取过后判断）
   let selChanged = false;
-  if (S.sel.model && !st.models.items.find((m) => m.id === S.sel.model)) {
+  if (st.models.fetchedAt && S.sel.model && !st.models.items.find((m) => m.id === S.sel.model)) {
     S.sel.model = '';
     selChanged = true;
   }
-  if (S.sel.agent && !st.agents.items.find((a) => a.id === S.sel.agent)) {
+  if (st.agents.fetchedAt && S.sel.agent && !st.agents.items.find((a) => a.id === S.sel.agent)) {
     S.sel.agent = '';
     selChanged = true;
   }
@@ -451,48 +453,182 @@ function renderResources() {
   syncSelectors();
 }
 
+function pickItems(kind) {
+  if (kind === 'agent') {
+    return [{ value: '', label: '默认搭档', desc: '沿用会话当前搭档' }].concat(
+      res.state.agents.items.map((a) => ({
+        value: a.id,
+        label: a.displayName || a.name || a.id,
+        desc: a.description || a.id,
+      }))
+    );
+  }
+  return [{ value: '', label: '服务端默认', desc: '由服务端选择模型' }].concat(
+    res.state.models.items.map((m) => ({
+      value: m.id,
+      label: (m.displayName || m.modelLevelDesc || m.name || m.id) + (m.autoRouting ? '（自动路由）' : ''),
+      desc: m.id,
+    }))
+  );
+}
+
+function pickLabel(kind, value) {
+  if (!value) return kind === 'agent' ? '默认搭档' : '服务端默认';
+  const it = pickItems(kind).find((x) => x.value === value);
+  return it ? it.label : value;
+}
+
+function updatePickLabels() {
+  const a = $('#pickAgentLabel');
+  const m = $('#pickModelLabel');
+  if (a) {
+    const t = pickLabel('agent', S.sel.agent);
+    if (a.textContent !== t) a.textContent = t;
+    const btn = $('#btnPickAgent');
+    if (btn) btn.title = '智能体：' + t;
+  }
+  if (m) {
+    const t = pickLabel('model', S.sel.model);
+    if (m.textContent !== t) m.textContent = t;
+    const btn = $('#btnPickModel');
+    if (btn) btn.title = '模型：' + t;
+  }
+  const pop = $('#pickPop');
+  const open = !!(pop && !pop.hidden);
+  $('#btnPickAgent').setAttribute('aria-expanded', open && PICK.kind === 'agent' ? 'true' : 'false');
+  $('#btnPickModel').setAttribute('aria-expanded', open && PICK.kind === 'model' ? 'true' : 'false');
+}
+
 function renderSelectors() {
   const st = res.state;
-  const selModel = $('#selModel');
-  const selAgent = $('#selAgent');
-  const prevModel = S.sel.model;
-  const prevAgent = S.sel.agent;
-
-  selModel.innerHTML = '<option value="">服务端默认</option>';
-  st.models.items.forEach((m) => {
-    const o = document.createElement('option');
-    o.value = m.id;
-    o.textContent = (m.displayName || m.modelLevelDesc || m.name || m.id) + (m.autoRouting ? '（自动路由）' : '');
-    selModel.appendChild(o);
-  });
-
-  selAgent.innerHTML = '<option value="">默认搭档</option>';
-  st.agents.items.forEach((a) => {
-    const o = document.createElement('option');
-    o.value = a.id;
-    o.textContent = a.displayName || a.name || a.id;
-    selAgent.appendChild(o);
-  });
-
-  selModel.value = prevModel;
-  if (selModel.value !== prevModel) selModel.value = '';
-  selAgent.value = prevAgent;
-  if (selAgent.value !== prevAgent) selAgent.value = '';
-
+  // 资源尚未加载时不要清掉已保存的选择；只有确实拉取过再判断选项是否还存在
+  if (st.models.fetchedAt && S.sel.model && !st.models.items.find((x) => x.id === S.sel.model)) {
+    S.sel.model = '';
+    saveSelection();
+  }
+  if (st.agents.fetchedAt && S.sel.agent && !st.agents.items.find((x) => x.id === S.sel.agent)) {
+    S.sel.agent = '';
+    saveSelection();
+  }
+  updatePickLabels();
   renderToolPop();
   updateToolCount();
+  if (!$('#pickPop').hidden) renderPickList();
 }
 
 function syncSelectors() {
-  const selModel = $('#selModel');
-  const selAgent = $('#selAgent');
-  if (selModel && selModel.value !== S.sel.model) selModel.value = S.sel.model;
-  if (selAgent && selAgent.value !== S.sel.agent) selAgent.value = S.sel.agent;
+  updatePickLabels();
   updateToolCount();
+  if (!$('#pickPop').hidden) renderPickList();
   // 勾选态同步
   $$('#toolPop input[type=checkbox]').forEach((cb) => {
     cb.checked = S.sel.tools.indexOf(cb.value) >= 0;
   });
+}
+
+function renderPickList() {
+  const list = $('#pickList');
+  const empty = $('#pickEmpty');
+  const search = $('#pickSearch');
+  if (!list || !empty || !search) return;
+  const q = (search.value || '').trim().toLowerCase();
+  const selected = PICK.kind === 'agent' ? S.sel.agent : S.sel.model;
+  const all = pickItems(PICK.kind);
+  const items = all.filter(
+    (it) => !q || (it.label + ' ' + it.desc + ' ' + it.value).toLowerCase().indexOf(q) >= 0
+  );
+  PICK.items = items;
+  if (!items.length) {
+    list.innerHTML = '';
+    empty.hidden = false;
+    PICK.active = -1;
+    return;
+  }
+  empty.hidden = true;
+  if (PICK.active < 0 || PICK.active >= items.length) {
+    const idx = items.findIndex((it) => it.value === selected);
+    PICK.active = idx >= 0 ? idx : 0;
+  }
+  list.innerHTML = items
+    .map(
+      (it, i) =>
+        '<button type="button" class="pick-item' +
+        (it.value === selected ? ' on' : '') +
+        (i === PICK.active ? ' active' : '') +
+        '" role="option" aria-selected="' + (it.value === selected) +
+        '" data-value="' + escapeHtml(it.value) + '">' +
+        '<span class="pi-main"><span class="pi-name">' + escapeHtml(it.label) + '</span>' +
+        (it.desc ? '<span class="pi-sub">' + escapeHtml(it.desc) + '</span>' : '') +
+        '</span><svg class="icon check"><use href="#i-check"/></svg></button>'
+    )
+    .join('');
+  const active = list.querySelector('.pick-item.active');
+  if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
+}
+
+function positionPickPop(anchor) {
+  if (!anchor || window.innerWidth <= 900) return;
+  const pop = $('#pickPop');
+  if (!pop) return;
+  const r = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const w = Math.min(340, vw - 24);
+  pop.style.width = w + 'px';
+  pop.style.maxHeight = '360px';
+  const natural = Math.min(360, pop.scrollHeight || 240);
+  const above = r.top - 12;
+  const below = vh - r.bottom - 12;
+  const openUp = below < Math.min(natural, 220) && above > below;
+  const maxH = Math.min(360, Math.max(120, openUp ? above - 8 : below - 8));
+  pop.style.maxHeight = maxH + 'px';
+  const left = Math.min(Math.max(12, r.left), Math.max(12, vw - w - 12));
+  const top = openUp ? Math.max(10, r.top - Math.min(natural, maxH) - 8) : r.bottom + 8;
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+}
+
+function openPick(kind, anchor) {
+  const pop = $('#pickPop');
+  if (!pop) return;
+  if (!pop.hidden && PICK.kind === kind) {
+    closePick();
+    return;
+  }
+  PICK.kind = kind;
+  PICK.anchor = anchor;
+  PICK.active = -1;
+  const search = $('#pickSearch');
+  search.value = '';
+  const ph = kind === 'agent' ? '搜索智能体' : '搜索模型';
+  search.placeholder = ph;
+  search.setAttribute('aria-label', ph);
+  pop.hidden = false;
+  renderPickList();
+  updatePickLabels();
+  positionPickPop(anchor);
+  setTimeout(() => {
+    const s = $('#pickSearch');
+    if (s) s.focus();
+  }, 20);
+}
+
+function closePick() {
+  const pop = $('#pickPop');
+  if (pop) pop.hidden = true;
+  PICK.kind = '';
+  PICK.items = [];
+  PICK.active = -1;
+  PICK.anchor = null;
+  updatePickLabels();
+}
+
+function choosePick(value) {
+  if (PICK.kind === 'agent') S.sel.agent = value;
+  else if (PICK.kind === 'model') S.sel.model = value;
+  saveSelection();
+  updatePickLabels();
+  closePick();
 }
 
 function renderToolPop() {
@@ -2113,13 +2249,48 @@ function bindEvents() {
   });
 
   // 模型 / 智能体 / 工具
-  $('#selModel').addEventListener('change', function () {
-    S.sel.model = this.value;
-    saveSelection();
+  $('#btnPickAgent').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openPick('agent', e.currentTarget);
   });
-  $('#selAgent').addEventListener('change', function () {
-    S.sel.agent = this.value;
-    saveSelection();
+  $('#btnPickModel').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openPick('model', e.currentTarget);
+  });
+  $('#pickSearch').addEventListener('input', () => {
+    PICK.active = -1;
+    renderPickList();
+  });
+  $('#pickSearch').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closePick();
+      return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!PICK.items.length) return;
+      PICK.active =
+        (PICK.active + (e.key === 'ArrowDown' ? 1 : -1) + PICK.items.length) % PICK.items.length;
+      renderPickList();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const it = PICK.items[PICK.active];
+      if (it) choosePick(it.value);
+    }
+  });
+  $('#pickList').addEventListener('click', (e) => {
+    const it = e.target.closest('.pick-item');
+    if (it) choosePick(it.dataset.value);
+  });
+  document.addEventListener('click', (e) => {
+    const pop = $('#pickPop');
+    if (!pop || pop.hidden) return;
+    if (pop.contains(e.target)) return;
+    if (e.target.closest('#btnPickAgent') || e.target.closest('#btnPickModel')) return;
+    closePick();
   });
   $('#btnTools').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2369,7 +2540,8 @@ function bindEvents() {
   // 快捷键
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (sidTip && !sidTip.hidden) hideSidTipNow();
+      if (!$('#pickPop').hidden) closePick();
+      else if (sidTip && !sidTip.hidden) hideSidTipNow();
       else if (!$('#dialog').hidden) closeDialog(false);
       else if ($('#toolPop').classList.contains('on')) toggleToolPop(false);
       else if ($('#drawer').classList.contains('on')) closeDrawer();
@@ -2389,6 +2561,14 @@ function bindEvents() {
 
   window.addEventListener('resize', () => {
     if ($('#toolPop').classList.contains('on')) positionToolPop();
+    if (!$('#pickPop').hidden) {
+      if (window.innerWidth <= 900) {
+        $('#pickPop').style.left = '';
+        $('#pickPop').style.top = '';
+      } else if (PICK.anchor) {
+        positionPickPop(PICK.anchor);
+      }
+    }
     if (window.innerWidth > 900 && $('#app').classList.contains('side-open')) closeSidebar();
   });
 

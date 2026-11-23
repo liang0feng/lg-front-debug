@@ -105,6 +105,8 @@ html[data-theme="dark"] {
 }
 
 * { box-sizing: border-box; }
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -119,6 +121,7 @@ body {
 }
 body.locked { overflow: hidden; }
 button, input, select, textarea { font: inherit; color: inherit; }
+option { background-color: var(--surface); color: var(--ink); }
 button { cursor: pointer; border: none; background: none; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -864,6 +867,51 @@ img { max-width: 100%; }
   font-size: 12.5px; color: var(--ink-2);
   max-width: 172px; padding: 2px 0; text-overflow: ellipsis;
 }
+.pick-value {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-width: 0; max-width: 172px; padding: 2px 0;
+  border: none; background: none; cursor: pointer;
+  font-size: 12.5px; color: var(--ink-2);
+}
+.pick-value > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-value .chev-d {
+  width: 12px; height: 12px; flex: 0 0 12px;
+  color: var(--muted-2); transform: rotate(90deg);
+}
+.pick-value:hover { color: var(--accent); }
+
+.pick-pop {
+  position: fixed; z-index: 66; width: 320px; max-height: 360px;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden;
+}
+.pick-pop[hidden] { display: none; }
+.pick-search {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 11px; border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.pick-search .icon { width: 14px; height: 14px; flex: 0 0 auto; color: var(--muted-2); }
+.pick-search input { flex: 1; min-width: 0; border: none; outline: none; background: none; font-size: 12.5px; }
+.pick-list { flex: 1; min-height: 0; overflow-y: auto; padding: 5px; }
+.pick-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 10px; border-radius: 8px; border: none; background: none;
+  text-align: left; cursor: pointer; color: var(--ink-2);
+}
+.pick-item:hover, .pick-item.active { background: var(--surface-2); }
+.pick-item.on { background: var(--accent-soft); color: var(--accent); }
+.pick-item .pi-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pick-item .pi-name { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-item .pi-sub {
+  margin-top: 1px; font-size: 11px; color: var(--muted); font-weight: 400;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pick-item.on .pi-name { font-weight: 600; }
+.pick-item .check { width: 14px; height: 14px; flex: 0 0 14px; color: var(--accent); opacity: 0; }
+.pick-item.on .check { opacity: 1; }
+.pick-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 12px; }
 .pick-btn {
   display: inline-flex; align-items: center; gap: 6px;
   border: 1px solid var(--line); border-radius: 9px;
@@ -1236,6 +1284,7 @@ img { max-width: 100%; }
   .pickers { gap: 5px; }
   .pick { padding: 2px 6px; }
   .pick select { max-width: 104px; font-size: 12px; }
+  .pick-value { max-width: 108px; font-size: 12px; }
   .hint { display: none; }
   .composer-foot { padding: 6px 4px 0; font-size: 10px; }
   .scroll-bottom { right: 14px; bottom: 148px; }
@@ -1250,6 +1299,12 @@ img { max-width: 100%; }
     width: auto !important; max-height: min(62vh, 480px) !important;
     border-radius: 18px;
   }
+  .pick-pop {
+    left: 10px !important; right: 10px !important;
+    top: auto !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    width: auto !important; max-height: min(60vh, 420px) !important;
+    border-radius: 16px;
+  }
   .side-row .ver { display: none; }
   .sess-actions { opacity: 1; position: static; transform: none; background: none; padding: 0; }
 }
@@ -1262,6 +1317,7 @@ img { max-width: 100%; }
 @media (max-width: 420px) {
   .pick > span { display: none; }
   .pick select { max-width: 96px; }
+  .pick-value { max-width: 96px; }
   .status-chip span { max-width: 70px; }
   .status-chip { padding: 4px 7px; }
 }

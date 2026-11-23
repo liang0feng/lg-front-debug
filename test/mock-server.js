@@ -424,9 +424,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (method === 'GET' && path === '/work/openapi/v1/agents') {
+    const names = [
+      '驾驶舱智能体', '小灵', '计划预算智能体', '建模推演智能体', '战略目标智能体',
+      '审批助手智能体', '问道阳明', '行业研究', '金财报', '任务推进智能体',
+      '空间智能体', '招标智能体', '合同审查智能体', '业务审批智能体', '人人采购智能体',
+      'Ai人才洞察（金蝶）', '结账智能体', '销售履约智能体', '灵基Build实训文档助手', '企业数据分析',
+    ];
     ok(res, {
-      records: [{ id: 'agent-1', name: '财务助手', displayName: '财务助手', description: '模拟智能体' }],
-      total: 1, page: 1, pageSize: 100,
+      records: names.map((n, i) => ({
+        id: 'agent-' + (i + 1),
+        name: n,
+        displayName: n,
+        description: '模拟智能体 · ' + n,
+      })),
+      total: names.length, page: 1, pageSize: 100,
     });
     return;
   }

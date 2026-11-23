@@ -90,7 +90,7 @@
         <button class="foot-btn slim" id="btnTheme">
           <svg class="icon" id="themeIcon"><use href="#i-moon"/></svg><span id="themeText">深色</span>
         </button>
-        <span class="ver" id="appVer">v1.0.5</span>
+        <span class="ver" id="appVer">v1.0.6</span>
       </div>
     </div>
   </aside>
@@ -155,14 +155,20 @@
           <textarea id="input" rows="1" placeholder="输入你的问题，Enter 发送，Shift + Enter 换行" aria-label="输入消息"></textarea>
           <div class="composer-bar">
             <div class="pickers">
-              <label class="pick">
+              <div class="pick">
                 <span>智能体</span>
-                <select id="selAgent"><option value="">默认搭档</option></select>
-              </label>
-              <label class="pick">
+                <button class="pick-value" id="btnPickAgent" type="button" aria-haspopup="listbox" aria-expanded="false" title="选择智能体">
+                  <span id="pickAgentLabel">默认搭档</span>
+                  <svg class="icon chev-d"><use href="#i-chevron"/></svg>
+                </button>
+              </div>
+              <div class="pick">
                 <span>模型</span>
-                <select id="selModel"><option value="">服务端默认</option></select>
-              </label>
+                <button class="pick-value" id="btnPickModel" type="button" aria-haspopup="listbox" aria-expanded="false" title="选择模型">
+                  <span id="pickModelLabel">服务端默认</span>
+                  <svg class="icon chev-d"><use href="#i-chevron"/></svg>
+                </button>
+              </div>
               <button class="pick-btn" id="btnTools" type="button">
                 <span>工具</span><b id="toolCount">0</b>
               </button>
@@ -335,6 +341,14 @@
   <div class="sid-tip-actions">
     <button class="link-btn" id="btnCopySidUrl" type="button">复制链接</button>
   </div>
+</div>
+<div class="pick-pop" id="pickPop" hidden>
+  <div class="pick-search">
+    <svg class="icon"><use href="#i-search"/></svg>
+    <input id="pickSearch" type="search" placeholder="搜索" autocomplete="off">
+  </div>
+  <div class="pick-list" id="pickList" role="listbox"></div>
+  <div class="pick-empty" id="pickEmpty" hidden>没有匹配项</div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
