@@ -1056,6 +1056,152 @@ function createMessageEl(msg, session) {
   return article;
 }
 
+const TOOL_META = {
+  websearch: { icon: 'i-search', label: '搜索' },
+  webfetch: { icon: 'i-download', label: '获取' },
+};
+
+function toolDisplay(t) {
+  const raw = String(t.tool || t.title || '').trim();
+  const key = raw.toLowerCase().replace(/[^a-z]/g, '');
+  const meta = TOOL_META[key] || null;
+  const input = t.input || {};
+  const detail = meta
+    ? key === 'websearch'
+      ? input.query
+      : key === 'webfetch'
+        ? input.url
+        : ''
+    : input.query || input.url || input.prompt || '';
+  return {
+    icon: meta ? meta.icon : 'i-spark',
+    label: meta ? meta.label : raw || '工具',
+    detail: detail ? String(detail) : '',
+  };
+}
+
+function toolStatus(t, streaming) {
+  if (t.status === 'running') return { text: '运行中', cls: 'running' };
+  if (t.status && t.status !== 'completed') return { text: '失败', cls: 'error' };
+  if (t.end && t.start) return { text: formatDuration(t.end - t.start), cls: 'done' };
+  if (streaming) return { text: '运行中', cls: 'running' };
+  return { text: '完成', cls: 'done' };
+}
+
+function toolInputText(t) {
+  if (!t.input) return '';
+  try {
+    return typeof t.input === 'string' ? t.input : JSON.stringify(t.input, null, 2);
+  } catch (e) {
+    return '';
+  }
+}
+
+function toolCallHtml(t, streaming) {
+  const d = toolDisplay(t);
+  const st = toolStatus(t, streaming);
+  const key = 'tool:' + (t.id || d.label);
+  const detail = d.detail ? '<span class="tc-detail">' + escapeHtml(d.detail) + '</span>' : '';
+  const inputText = toolInputText(t);
+  const output = typeof t.output === 'string' ? t.output : '';
+  const outHtml = output
+    ? '<div class="tool-output md" data-scroll-key="tool-out:' +
+      escapeHtml(t.id || '') +
+      '">' +
+      renderMarkdown(output.length > 60000 ? output.slice(0, 60000) + '\n\n…（输出过长，已截断显示）' : output) +
+      '</div>'
+    : st.cls === 'running'
+      ? '<div class="tool-running"><span class="typing"><i></i><i></i><i></i></span> 运行中…</div>'
+      : '<div class="tool-empty">（无输出）</div>';
+  const params = inputText
+    ? '<div class="tool-params"><span class="tp-label">参数</span><pre>' + escapeHtml(inputText) + '</pre></div>'
+    : '';
+  const copy = output
+    ? '<div class="tool-actions"><button class="link-btn" data-copy-tool="' +
+      escapeHtml(t.id || '') +
+      '">复制输出</button></div>'
+    : '';
+  return (
+    '<details class="tool-call ' +
+    st.cls +
+    '" data-key="' +
+    escapeHtml(key) +
+    '">' +
+    '<summary>' +
+    '<span class="tc-icon"><svg class="icon"><use href="#' +
+    d.icon +
+    '"/></svg></span>' +
+    '<span class="tc-title"><b>' +
+    escapeHtml(d.label) +
+    '</b>' +
+    detail +
+    '</span>' +
+    '<span class="tc-state ' +
+    st.cls +
+    '">' +
+    escapeHtml(st.text) +
+    '</span>' +
+    '<svg class="icon chev"><use href="#i-chevron"/></svg>' +
+    '</summary>' +
+    '<div class="tool-body">' +
+    params +
+    outHtml +
+    copy +
+    '</div></details>'
+  );
+}
+
+function toolGroupHtml(tools, streaming) {
+  const n = tools.length;
+  const running = tools.some((t) => t.status === 'running');
+  const failed = tools.some((t) => t.status && t.status !== 'running' && t.status !== 'completed');
+  const title = running
+    ? '正在调用 ' + n + ' 个工具'
+    : failed
+      ? '工具调用失败 · ' + n + ' 个工具'
+      : '任务完成 · 调用 ' + n + ' 个工具';
+  const icon = running ? 'i-refresh' : failed ? 'i-alert' : 'i-check';
+  const spin = running ? ' spin' : '';
+  return (
+    '<details class="tool-group" data-key="tools">' +
+    '<summary>' +
+    '<span class="tg-icon ' +
+    (running ? 'running' : failed ? 'error' : 'done') +
+    '"><svg class="icon' +
+    spin +
+    '"><use href="#' +
+    icon +
+    '"/></svg></span>' +
+    '<span class="tg-title">' +
+    escapeHtml(title) +
+    '</span>' +
+    '<svg class="icon chev"><use href="#i-chevron"/></svg>' +
+    '</summary>' +
+    '<div class="tool-list">' +
+    tools.map((t) => toolCallHtml(t, streaming)).join('') +
+    '</div></details>'
+  );
+}
+
+/** 重建附加区时保留用户已展开的 <details> 与内部滚动位置 */
+function setHtmlIfChanged(el, html) {
+  if (!el || el._html === html) return;
+  const open = new Set();
+  el.querySelectorAll('details[data-key][open]').forEach((d) => open.add(d.dataset.key));
+  const scrolls = [];
+  el.querySelectorAll('[data-scroll-key]').forEach((x) => scrolls.push([x.dataset.scrollKey, x.scrollTop]));
+  el.innerHTML = html;
+  el._html = html;
+  open.forEach((k) => {
+    const d = el.querySelector('details[data-key="' + k.replace(/"/g, '\\"') + '"]');
+    if (d) d.open = true;
+  });
+  scrolls.forEach(([k, v]) => {
+    const x = el.querySelector('[data-scroll-key="' + k.replace(/"/g, '\\"') + '"]');
+    if (x) x.scrollTop = v;
+  });
+}
+
 function paintMessage(node, msg, session) {
   if (!node || msg.role === 'user') return;
   const refs = node._refs;
@@ -1070,24 +1216,13 @@ function paintMessage(node, msg, session) {
   const bottom = [];
   if (msg.reasoning) {
     top.push(
-      '<details class="reasoning"><summary>思考过程</summary><div class="md">' +
+      '<details class="reasoning" data-key="reasoning"><summary>思考过程</summary><div class="md">' +
         renderMarkdown(msg.reasoning, { streaming }) +
         '</div></details>'
     );
   }
   if (msg.tools && msg.tools.length) {
-    top.push(
-      '<div class="tool-row">' +
-        msg.tools
-          .map(
-            (t) =>
-              '<span class="tool-chip" title="' + escapeHtml(t.state || '') + '">' +
-              escapeHtml(t.name || '工具') +
-              '</span>'
-          )
-          .join('') +
-        '</div>'
-    );
+    top.push(toolGroupHtml(msg.tools, streaming));
   }
   if (msg.error) {
     bottom.push('<div class="msg-error">' + escapeHtml(msg.error) + '</div>');
@@ -1112,8 +1247,8 @@ function paintMessage(node, msg, session) {
         '</div>'
     );
   }
-  refs.extra.innerHTML = top.join('');
-  refs.after.innerHTML = bottom.join('');
+  setHtmlIfChanged(refs.extra, top.join(''));
+  setHtmlIfChanged(refs.after, bottom.join(''));
 
   // 正文
   if (msg.text) {
@@ -1800,6 +1935,19 @@ function bindEvents() {
       copyCode.textContent = '已复制';
       setTimeout(() => {
         copyCode.textContent = '复制';
+      }, 1400);
+      return;
+    }
+    const copyTool = e.target.closest('[data-copy-tool]');
+    if (copyTool) {
+      const article = copyTool.closest('.msg');
+      const msg = article && article._msg;
+      const id = copyTool.dataset.copyTool;
+      const t = msg && (msg.tools || []).find((x) => String(x.id) === id);
+      copyText(t && t.output ? t.output : '');
+      copyTool.textContent = '已复制';
+      setTimeout(() => {
+        copyTool.textContent = '复制输出';
       }, 1400);
       return;
     }

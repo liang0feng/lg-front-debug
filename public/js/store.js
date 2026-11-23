@@ -177,10 +177,26 @@ function slimMessage(m) {
     text: m.text || '',
     parts: Array.isArray(m.parts) ? m.parts : undefined,
     artifacts: Array.isArray(m.artifacts) && m.artifacts.length ? m.artifacts : undefined,
-    tools: Array.isArray(m.tools) && m.tools.length ? m.tools : undefined,
+    tools: Array.isArray(m.tools) && m.tools.length ? m.tools.map(slimTool) : undefined,
     status: m.status || 'done',
     time: m.time || Date.now(),
     meta: m.meta || undefined,
+  };
+}
+
+function slimTool(t) {
+  const out = typeof t.output === 'string' ? t.output : '';
+  return {
+    id: t.id,
+    callID: t.callID || '',
+    tool: t.tool || '',
+    title: t.title || '',
+    status: t.status || '',
+    input: t.input || null,
+    start: t.start || 0,
+    end: t.end || 0,
+    // 工具输出可能很长，落盘截断，避免撑爆 localStorage
+    output: out.length > 20000 ? out.slice(0, 20000) + '\n…（已截断）' : out,
   };
 }
 

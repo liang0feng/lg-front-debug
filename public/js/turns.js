@@ -596,18 +596,30 @@ export class TurnEngine {
     }
 
     if (type === 'tool') {
+      const st = part.state && typeof part.state === 'object' ? part.state : {};
       const tool = {
         id,
-        name: part.toolName || part.name || part.title || part.tool || part.toolId || '工具调用',
-        state:
+        callID: part.callID || '',
+        tool: part.tool || st.title || part.toolName || '工具',
+        title: st.title || part.tool || part.toolName || '工具',
+        status:
           typeof part.state === 'string'
             ? part.state
-            : typeof part.status === 'string'
-              ? part.status
+            : typeof st.status === 'string'
+              ? st.status
               : '',
+        input: st.input || null,
+        output:
+          typeof st.output === 'string'
+            ? st.output
+            : st.output
+              ? JSON.stringify(st.output, null, 2)
+              : '',
+        start: (st.time && st.time.start) || 0,
+        end: (st.time && st.time.end) || 0,
       };
       const idx = turn.tools.findIndex((t) => t.id === id);
-      if (idx >= 0) turn.tools[idx] = Object.assign(turn.tools[idx], tool);
+      if (idx >= 0) turn.tools[idx] = Object.assign({}, turn.tools[idx], tool);
       else turn.tools.push(tool);
       turn.botMsg.tools = turn.tools;
       turn.sawActivity = true;

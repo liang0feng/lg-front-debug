@@ -94,6 +94,7 @@ function playStream(sessionId, eventId, task) {
   const msgA = 'msg_a_' + seq;
   const textId = 'prt_text_' + seq;
   const toolId = 'prt_tool_' + seq;
+  const toolId2 = 'prt_tool2_' + seq;
   const artId = 'prt_art_' + seq;
   const t0 = Date.now();
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -119,6 +120,21 @@ function playStream(sessionId, eventId, task) {
         sessionID: sessionId,
         messageID: msgA,
         part: { id: textId, messageID: msgA, type: 'text', text: '', time: { start: Date.now() } },
+      },
+    });
+
+    // 工具调用：先 running，再 completed（结构对齐真实 SSE）
+    const toolStart = Date.now();
+    emit(eventId, {
+      type: 'message.part.updated',
+      properties: {
+        sessionID: sessionId,
+        messageID: msgA,
+        part: {
+          id: toolId, messageID: msgA, sessionID: sessionId, type: 'tool',
+          tool: 'WebSearch', callID: 'call_mock_search_1',
+          state: { input: { query: task.query }, status: 'running', title: 'WebSearch', time: { start: toolStart } },
+        },
       },
     });
 
@@ -153,7 +169,20 @@ function playStream(sessionId, eventId, task) {
       properties: {
         sessionID: sessionId,
         messageID: msgA,
-        part: { id: toolId, messageID: msgA, type: 'tool', toolName: 'Kingdee-SaaS', state: 'completed' },
+        part: {
+          id: toolId, messageID: msgA, sessionID: sessionId, type: 'tool',
+          tool: 'WebSearch', callID: 'call_mock_search_1',
+          state: {
+            input: { query: task.query },
+            output:
+              'Web search results for query: "' + task.query + '"\n\n' +
+              'Answer summary from web search:\n这是 mock 的搜索结果摘要。\n\n' +
+              'Links:\n  - [示例链接](https://example.com)\n  - [灵基官网](https://example.com/docs)',
+            status: 'completed',
+            title: 'WebSearch',
+            time: { start: toolStart, end: Date.now() },
+          },
+        },
       },
     });
     emit(eventId, {
@@ -198,6 +227,24 @@ function playStream(sessionId, eventId, task) {
           part: { id: text2, messageID: msgA2, type: 'text', text: '', time: { start: Date.now() } },
         },
       });
+      const fetchStart = Date.now();
+      emit(eventId, {
+        type: 'message.part.updated',
+        properties: {
+          sessionID: sessionId,
+          messageID: msgA2,
+          part: {
+            id: toolId2, messageID: msgA2, sessionID: sessionId, type: 'tool',
+            tool: 'WebFetch', callID: 'call_mock_fetch_1',
+            state: {
+              input: { url: 'https://zh.wikisource.org/wiki/%E8%83%8C%E5%BD%B1', prompt: '输出原文全文' },
+              status: 'running',
+              title: 'WebFetch',
+              time: { start: fetchStart },
+            },
+          },
+        },
+      });
       const second = '\n\n## 工具执行后的结论\n\n这是第二条 assistant message 里的正文，应当出现在同一条回答里。';
       for (const c of second.match(/[\s\S]{1,6}/g) || []) {
         await sleep(40);
@@ -212,6 +259,27 @@ function playStream(sessionId, eventId, task) {
           sessionID: sessionId,
           messageID: msgA2,
           part: { id: text2, messageID: msgA2, type: 'text', text: second, time: { start: t0, end: Date.now() } },
+        },
+      });
+      emit(eventId, {
+        type: 'message.part.updated',
+        properties: {
+          sessionID: sessionId,
+          messageID: msgA2,
+          part: {
+            id: toolId2, messageID: msgA2, sessionID: sessionId, type: 'tool',
+            tool: 'WebFetch', callID: 'call_mock_fetch_1',
+            state: {
+              input: { url: 'https://zh.wikisource.org/wiki/%E8%83%8C%E5%BD%B1', prompt: '输出原文全文' },
+              output:
+                'The useful information in https://zh.wikisource.org/wiki/%E8%83%8C%E5%BD%B1 as follows:\n\n' +
+                '我與父親不相見已二年餘了，我最不能忘記的是他的背影。……\n\n' +
+                'Summary: 页面提供了《背影》的完整正文（mock 片段）。',
+              status: 'completed',
+              title: 'WebFetch',
+              time: { start: fetchStart, end: Date.now() },
+            },
+          },
         },
       });
     }

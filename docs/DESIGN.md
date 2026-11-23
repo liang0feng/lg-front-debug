@@ -179,6 +179,17 @@ cacheKey = `lg.res.v1.${base}|${tenant}|${appId}|${subject}|${subType}`
 - 支持：标题、粗体/斜体/删除线、行内代码、围栏代码块（带语言与复制按钮）、有序/无序/嵌套列表、任务列表、引用、表格、分隔线、链接（仅 http/https/mailto）、裸 URL。
 - 流式容忍：未闭合的围栏按代码块渲染；渲染节流 80ms，避免长文本抖动。
 - 用户消息按纯文本渲染（保留换行），助手消息按 Markdown 渲染。
+
+### 5.1 工具调用（两层折叠）
+
+真实 SSE 的 `tool` part 结构为 `{ type:"tool", tool, callID, state:{ input, output, status, time:{start,end}, title } }`，同一 `part.id` 会有 running → completed 两次快照。
+
+- 轮次内按 `part.id` 归并工具调用，保留 `input/output/status/start/end`，不放进正文 parts。
+- **第一层**：整个轮次的工具合并为一个 `<details>`，标题「任务完成 · 调用 N 个工具」/「正在调用 N 个工具」。
+- **第二层**：每个工具一个 `<details>`，标题按 `tool` 映射（WebSearch → 搜索 <query>，WebFetch → 获取 <url>），右侧显示耗时或运行状态。
+- 详情区展示参数 JSON 与输出；输出按 Markdown 渲染，可复制；过长的输出在展示与落盘时都截断。
+- 两层默认折叠。重建附加区时按 `data-key` 保留用户展开的明细与输出区滚动位置，避免流式刷新把用户正在看的内容收起。
+- 工具输出落盘截断 20000 字符，控制 localStorage 体积。
 - 链接统一加 `rel="noopener noreferrer" target="_blank"`；HTML 标签一律转义，不开放原始 HTML。
 
 ## 6. 移动端
