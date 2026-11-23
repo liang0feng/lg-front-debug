@@ -1,0 +1,9 @@
+{
+  "name": "lg-front-debug-deploy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "灵基对话台部署工具（SSH 传输、systemd、nginx）",
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  }
+}

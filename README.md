@@ -1,6 +1,6 @@
 # 灵基对话台 · OpenAPI 调试前端
 
-> **v1.0.6 · 2026-11-23**
+> **v1.0.7 · 2026-11-23**
 > 在 v0.9.1 单文件版基础上重构：**SSE 优先 / 轮询兜底、多会话并行、Markdown 渲染、资源缓存与刷新语义、移动端、视觉与交互**。
 > v1.0.1 修复：调试看板会话过滤随切换刷新、请求中文标签；一轮多 assistant message（工具调用后继续输出）合并渲染；新增 SSE 原始事件记录与一键复制。
 > v1.0.2：按真实 `tool` part 结构实现**工具调用两层折叠**（外层工具组、内层单个调用的参数与输出），默认折叠；输入框高度、SSE 记录等细节回归。
@@ -8,6 +8,7 @@
 > v1.0.4：```chart / ```echarts 围栏渲染为内联 SVG 图表（bar/line/pie、横向条形、多系列、stack），含悬停提示与数据表。
 > v1.0.5：标题右侧新增「复制会话 ID」与「在灵基中查看」（完整链接悬停显示、可复制链接）。
 > v1.0.6：智能体/模型改为可搜索的固定高度选择器（不再被视口裁切）；补齐深色主题下原生控件的 `color-scheme` 适配。
+> v1.0.7：支持部署在子路径（自动推导接口前缀）；新增 SSH 自动化部署工具 `deploy/`（真实配置含账号密码，已在 `.gitignore` 中排除）。
 > 设计细节见 [docs/DESIGN.md](docs/DESIGN.md)。
 
 一个零依赖、单进程的本地 Web 应用：托管前端页面，并把同源 `/api/*` 请求转发到灵基 OpenAPI 环境。页面与接口同源，**不会再遇到 `file://` 打开时的跨域（CORS）问题**。
@@ -206,6 +207,7 @@ public/
     app.js            UI 控制器
 test/
   selftest.mjs        纯函数自测（SSE / Markdown / 存储迁移）
+deploy/               部署工具（SSH 发布 / 回滚）与 nginx、systemd 模板，用法见 DEPLOY.md
 docs/
   DESIGN.md           设计说明
   灵基开放OpenAPI-v3.openapi.json / .yaml
@@ -294,6 +296,7 @@ node test/mock-server.js 4398
 
 ## 文档
 
+- [部署文档（部署内容 / nginx 独立 location / 后续更新 / 自动化脚本）](DEPLOY.md)
 - [设计说明（SSE / 轮询 / 多会话 / 缓存）](docs/DESIGN.md)
 - [灵基开放 OpenAPI v3 规范（JSON）](docs/灵基开放OpenAPI-v3.openapi.json)
 - [灵基开放 OpenAPI v3 规范（YAML）](docs/灵基开放OpenAPI-v3.openapi.yaml)
@@ -314,6 +317,7 @@ node test/mock-server.js 4398
 | `v1.0.4` | chart 围栏渲染为 SVG 图表（bar/line/pie、多系列、stack、悬停与数据表） |
 | `v1.0.5` | 标题右侧「复制会话 ID」「在灵基中查看」；完整链接悬停显示并可复制 |
 | `v1.0.6` | 智能体/模型可搜索选择器（不裁切、移动端底部弹层）；深色主题原生控件适配 |
+| `v1.0.7` | 子路径部署支持（自动推导接口前缀）；SSH 自动化部署工具与 systemd/nginx 模板 |
 
 遇到 `502 PROXY_ERROR`：本地服务连不上目标环境，先确认网络与「服务地址」。
 遇到 `5001093001`：SSE 路由未注册，本版会自动重连并重试；仍失败请检查网络后重发。

@@ -3,3 +3,7 @@ node_modules/
 Thumbs.db
 *.log
 .claude/
+
+# 部署配置含账号密码，不要提交
+deploy/deploy.config.json
+deploy/deploy.config.local.json

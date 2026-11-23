@@ -1,0 +1,22 @@
+{
+  "host": "192.168.1.20",
+  "port": 22,
+  "username": "deploy",
+  "password": "在这里填部署机登录密码",
+  "privateKeyPath": "",
+  "passphrase": "",
+  "sudoPassword": "",
+  "remoteDir": "/opt/lingee-debug",
+  "serviceName": "lingee-debug",
+  "runUser": "",
+  "appPort": 38080,
+  "target": "https://app.lingee.com",
+  "nodeBin": "",
+  "keepReleases": 5,
+  "nginx": {
+    "mode": "location",
+    "locationFile": "/etc/nginx/snippets/lingee-debug.locations.conf",
+    "serverName": "lingee-debug.example.com",
+    "pathPrefix": "/lingee-debug/"
+  }
+}

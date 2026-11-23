@@ -3,6 +3,9 @@
 import { hmacSha256Hex, newRequestId, randomHex, sha256Hex } from './crypto.js';
 
 const SERVED = /^https?:$/.test(location.protocol);
+/* 应用根路径。部署在子路径（如 /lingee-debug/）时，接口前缀随之为 /lingee-debug/api；
+ * 部署在站点根或独立域名时为 /api。由当前模块 URL 推导，无需按环境改代码。 */
+const APP_BASE = SERVED ? new URL('../', import.meta.url).pathname : '/';
 
 export class ApiError extends Error {
   constructor(code, message, opts = {}) {
@@ -135,7 +138,7 @@ export class ApiClient {
       });
       qs = '?' + new URLSearchParams(clean).toString();
     }
-    return (SERVED ? '/api' + path : this.base + path) + qs;
+    return (SERVED ? APP_BASE + 'api' + path : this.base + path) + qs;
   }
 
   _baseHeaders(extra) {
