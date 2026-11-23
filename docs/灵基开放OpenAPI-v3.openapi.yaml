@@ -1,0 +1,2045 @@
+openapi: 3.0.1
+info:
+  title: 灵基 OpenAPI v3
+  version: 3.1.0
+  description: '灵基开放平台 OpenAPI 完整接口规范（依据官方《灵基 OpenAPI 接入指南》整理）。
+
+
+    唯一调用流程：本地 HMAC 签名 → POST /console/openapi/v1/access-tokens → 携带 Bearer 调用全部业务接口。HMAC 不是独立 HTTP 接口，它是签发请求在客户端本地完成的签名算法。
+
+
+    共 15 个接口：1 个令牌签发接口 + 14 个 Bearer 业务接口。
+
+
+    导入后在 Apifox 环境里配置这些变量：lingee_app_id、lingee_app_secret、lingee_tenant_id、lingee_proxy_mode、lingee_access_token（初始留空，由签发接口的后置脚本写入）、lingee_request_id。环境前置 URL 填目标环境 HTTPS 源站，例如 https://your-host，不要带 /work 或 /console。
+
+
+    本规范不自动安装前后置脚本——签发接口的 HMAC 签名与令牌保存需要按接入手册手工配置脚本，OpenAPI 本身不携带可执行脚本。
+
+
+    业务接口字段、响应结构与错误码均来自官方文档；文档未明确的类型（如 interval_time、credits、reasoning）保留为自由结构并在字段说明中标注，未作类型假设。
+
+
+    实测修订（2026-11-20）：发起异步对话前，必须先建立并保持该会话的 SSE 连接，否则返回业务码 5001093001（message：SSE 路由未注册，请先调用 sse_register）；该错误可能以 HTTP 202 返回——202 只代表受理，不代表执行已启动，须以响应体 code 判定成功。'
+tags:
+- name: 01 认证 换取 AccessToken
+  description: 应用凭证换取 AccessToken（HMAC 签名，唯一非 Bearer 接口）。
+- name: 02 业务 资源查询
+  description: 智能体、技能、工具、模型等资源查询，均为 GET。
+- name: 03 业务 会话
+  description: 会话创建、异步对话、结果轮询、SSE 订阅、停止、附件上传与产物下载。
+- name: 04 业务 定时任务
+  description: 定时任务列表、触发与单次执行结果查询。
+servers: []
+security: []
+paths:
+  /console/openapi/v1/access-tokens:
+    post:
+      tags:
+      - 01 认证 换取 AccessToken
+      summary: 获取 AccessToken
+      operationId: issueAccessToken
+      description: '用 App ID / App Secret 做本地 HMAC 签名，换取 AccessToken。这是整条链路唯一的签发接口，签发环节不需要已有令牌。
+
+
+        签名要点：签名原文由 10 行内容以 \n 连接、末尾不加换行，第 4 行（Query）与第 9 行（User-Id）为空；BODY_SHA256 为实际发送请求体 UTF-8 字节的 SHA-256 小写十六进制；signature = hex(HMAC-SHA256(appSecret, canonical))。签名路径须与请求 URL 路径完全一致，含 /console 前缀。
+
+
+        签名完成后不得再修改 URL、请求体或签名请求头，否则请求体哈希不匹配会返回 401 与 5001233062。本接口不携带 Authorization、X-Lingee-OpenApi-User-Id 等用户身份头。
+
+
+        限流：同一 appId 与来源 IP 每分钟 30 次，同一 appId 与用户标识每分钟 5 次。令牌默认有效期 7200 秒，应按应用、租户、执行用户隔离缓存，不要每笔业务请求都重新签发。'
+      security: []
+      parameters:
+      - name: Request-Id
+        in: header
+        required: true
+        description: 请求标识，必填并参与 HMAC 签名。1–128 个可打印 ASCII 字符，首尾不得有空白；建议使用 32 位随机十六进制字符串。由前置脚本生成。
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+        example: '{{lingee_request_id}}'
+      - &id001
+        name: X-Tenant-Id
+        in: header
+        required: true
+        description: 应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。
+        schema:
+          type: string
+        example: '{{lingee_tenant_id}}'
+      - name: X-Lingee-OpenApi-App-Id
+        in: header
+        required: true
+        description: 应用 App ID。（由签发前置脚本自动写入，不要手工填写。）
+        schema:
+          type: string
+        example: '{{lingee_app_id}}'
+      - name: X-Lingee-OpenApi-Timestamp
+        in: header
+        required: true
+        description: Unix 毫秒时间戳，与服务端偏差须在 ±300 秒内。（由签发前置脚本自动写入，不要手工填写。）
+        schema:
+          type: string
+        example: '{{lingee_timestamp}}'
+      - name: X-Lingee-OpenApi-Nonce
+        in: header
+        required: true
+        description: 每次请求重新生成的随机值，建议长度 16–128 字符。（由签发前置脚本自动写入，不要手工填写。）
+        schema:
+          type: string
+        example: '{{lingee_nonce}}'
+      - name: X-Lingee-OpenApi-Signature
+        in: header
+        required: true
+        description: HMAC-SHA256 签名，小写十六进制字符串。（由签发前置脚本自动写入，不要手工填写。）
+        schema:
+          type: string
+        example: '{{lingee_signature}}'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '令牌签发请求体。字段取值随应用「代理用户」模式变化，两种模式互斥：
+
+                - 固定用户模式（FIXED_PROXY）：仅传 tenant_id，不得传 subject_type / subject / data_center_id，否则返回 403 与 5001233075。
+
+                - 白名单用户模式（HEADER_USER）：tenant_id + subject_type + subject 必填，subject_type 为 erp_user 时还须 data_center_id。
+
+                签发失败最常见的原因是把两种模式的字段混填。'
+              required:
+              - tenant_id
+              properties:
+                tenant_id:
+                  type: string
+                  description: 应用绑定的租户标识，必须与应用配置的租户一致。
+                  example: 2559609318685252608_production
+                subject_type:
+                  type: string
+                  enum:
+                  - mobile
+                  - email
+                  - erp_user
+                  description: 执行用户标识类型。仅白名单用户模式填写，固定用户模式不得传入。
+                  example: mobile
+                subject:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  description: 执行用户标识：手机号、邮箱或 ERP 用户标识，长度 1–256 字符。仅白名单用户模式填写。
+                  example: '13800138000'
+                data_center_id:
+                  type: string
+                  description: ERP 数据中心 ID。仅 subject_type 为 erp_user 时必填。
+            example:
+              tenant_id: '{{lingee_tenant_id}}'
+        required: true
+        description: raw JSON。默认示例是固定用户模式（只传 tenant_id，可直接发送）。白名单用户模式请追加 subject_type 与 subject；subject_type 为 erp_user 时再加 data_center_id。
+      responses:
+        '200':
+          description: 签发成功。令牌明文仅本次返回。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  access_token: lta_xxxxx
+                  token_type: Bearer
+                  expires_in: 7200
+                  expires_at: '2026-09-08T12:30:00Z'
+        '400':
+          description: 请求参数不合法。错误码：5001233060（Request-Id 格式或长度不合法，须 1–128 个可打印 ASCII、首尾无空白）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233060'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '401':
+          description: 签名验证失败。错误码：5001233062（验签失败：核对 App Secret、签名路径、请求体字节与 10 行签名原文）、5001233063（时间戳超出 ±300 秒窗口）、5001233064（Nonce 重复使用）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233062'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '403':
+          description: 应用或用户校验失败。错误码：5001233075（代理模式、用户标识、租户或白名单不匹配；固定用户不可传 subject）、5001233065（应用未启用）、5001233066（来源 IP 不在白名单）、5001233071（接口未授权）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233075'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '429':
+          description: 触发签发限流（5001233083）。复用已有令牌，退避后重试。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233083'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '503':
+          description: 鉴权服务暂不可用（5001233081），稍后重试。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233081'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/agents:
+    get:
+      tags:
+      - 02 业务 资源查询
+      summary: 查询可用智能体
+      operationId: listAgents
+      x-permission-code: kwork-server:lingee.resource.read.assistants
+      description: 返回当前执行用户已安装并激活的智能体，其 id 即发起对话的 assistant_id。本接口不会用空列表代替失败：503 与 5001233081 表示数据源暂不可用，据此可区分「该用户确无可用智能体」与「服务暂时不可用」。
+      security:
+      - BearerAuth: []
+      parameters:
+      - &id002
+        name: page
+        in: query
+        required: false
+        description: 页码，从 1 起，缺省 1。
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+        example: 1
+      - &id003
+        name: pageSize
+        in: query
+        required: false
+        description: 每页条数，缺省 50，上限 100；超过按 100 处理，不报错。
+        schema:
+          type: integer
+          default: 50
+          maximum: 100
+        example: 50
+      - *id001
+      - &id004
+        name: Request-Id
+        in: header
+        required: false
+        description: Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。
+        schema:
+          type: string
+          minLength: 16
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+        example: '{{lingee_request_id}}'
+      responses:
+        '200':
+          description: 成功。data 为分页信封；响应中的空值字段会被省略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentsPageEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  records:
+                  - id: '2089566466853781506'
+                    name: 企业知识中心
+                    displayName: 企业知识中心
+                    description: 企业知识中心
+                  total: 1
+                  page: 1
+                  pageSize: 50
+        '401': &id005
+          description: 鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233082'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '503':
+          description: 数据源暂不可用（5001233081）。本接口不返回空列表代替失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233081'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/skills:
+    get:
+      tags:
+      - 02 业务 资源查询
+      summary: 查询可用技能
+      operationId: listSkills
+      x-permission-code: kwork-server:lingee.resource.read.skills
+      description: 返回当前执行用户已安装的技能，不含系统全局技能。发起对话的 skill_names 须填这里的 name，误传技能 id 会被静默忽略——请求不报错，但技能不生效。503 与 5001233081 表示数据源暂不可用，不返回空列表。
+      security:
+      - BearerAuth: []
+      parameters:
+      - *id002
+      - *id003
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 成功。data 为分页信封；响应中的空值字段会被省略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillsPageEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  records:
+                  - id: '3011872366401228801'
+                    name: monthly-report
+                    displayName: 月度报表助手
+                    description: 按模板生成月度经营报表
+                  total: 1
+                  page: 1
+                  pageSize: 50
+        '401': *id005
+        '503':
+          description: 数据源暂不可用（5001233081）。本接口不返回空列表代替失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233081'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/tools:
+    get:
+      tags:
+      - 02 业务 资源查询
+      summary: 查询可用工具
+      operationId: listTools
+      x-permission-code: kwork-server:lingee.resource.read.tools
+      description: '返回当前执行用户已安装且开关打开的工具，其 id 即发起对话 tools 数组的元素。已从工具目录下架的工具会被剔除，与控制台「已安装工具」一致；目录服务暂时不可用时保留本地视图，此时 name 与 displayName 退化为 id。
+
+
+        列表还会包含系统内置 ERP 工具（如 Kingdee-SaaS 金蝶 SaaS），仅当该租户配置了可用的 ERP 连接器、且工具支持该连接器的产品类型时出现。这类工具无需安装，但必须由调用方自行放进 tools 才会生效——tools 一旦下发就是本轮的完整工具集。ERP 帐套的还原与选择在工具内部完成，本接口不返回帐套信息。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - *id002
+      - *id003
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 成功。data 为分页信封；响应中的空值字段会被省略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolsPageEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  records:
+                  - id: '2089566466853781506'
+                    name: 企业知识中心
+                    displayName: 企业知识中心
+                    description: 企业知识中心
+                  - id: Kingdee-SaaS
+                    name: 金蝶SaaS
+                    displayName: 金蝶SaaS
+                    description: Operate explicitly requested Kingdee SaaS ERP workflows.
+                  total: 2
+                  page: 1
+                  pageSize: 50
+        '401': *id005
+        '503':
+          description: 数据源暂不可用（5001233081）。本接口不返回空列表代替失败。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001233081'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/models:
+    get:
+      tags:
+      - 02 业务 资源查询
+      summary: 查询租户可选模型
+      operationId: listModels
+      x-permission-code: kwork-server:lingee.resource.read.models
+      description: '返回当前租户可选的逻辑模型，用于填写发起对话的 model。无请求参数，且不分页——可选档位量级固定在十条上下，data 直接为数组，没有 records 与 total 包装。
+
+
+        请直接取用 id 的整体值，不要自行拼接三段：subDomain 随档位变化（同一租户下可能为 default、租户标识或 HSP_INF、STD_INF 等子领域标识），组合不匹配时服务端会回落为其他模型且不报错。
+
+
+        当前环境未开放模型选择时返回空数组，此时请省略 model 参数由服务端使用默认模型。本接口的空数组属正常状态，与 agents/skills/tools 中「数据源不可用返回 503」的语义不同。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 成功。data 直接为数组，可为空数组。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                - id: work/auto/default
+                  name: 自动
+                  displayName: 自动
+                  domain: work
+                  modelLevel: auto
+                  subDomain: default
+                  modelLevelDesc: 自动
+                  autoRouting: true
+                - id: work/expert/HSP_INF
+                  name: 专家
+                  displayName: 专家
+                  domain: work
+                  modelLevel: expert
+                  subDomain: HSP_INF
+                  modelLevelDesc: 专家
+        '401': *id005
+  /work/openapi/v1/session:
+    post:
+      tags:
+      - 03 业务 会话
+      summary: 创建会话
+      operationId: createSession
+      x-permission-code: kwork-server:lingee.session.create
+      description: '显式新建一个会话，返回的 session_id 供后续接口定位会话。订阅 SSE 前必须先显式建会话。
+
+
+        请求体可选，允许空 body。不传 session_id 直接发起对话会自动新建会话，等价于先调用一次本接口。
+
+
+        提供 Request-Id 时，本接口把它作为业务幂等键（16–128 位 URL-safe）。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - *id001
+      - *id004
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 创建会话请求体。请求体可选，允许空 body。
+              properties:
+                external_ref:
+                  type: string
+                  maxLength: 128
+                  description: 业务键，如审批单号，用于按业务键找回会话与排障。先 trim 再判长，上限 128 字符；空白等同未传，超长返回 400 与 5001003002。
+                  example: APPROVAL-2026-001
+            example:
+              external_ref: APPROVAL-2026-001
+        description: 可选，允许空 body。示例给的是业务键 external_ref（上限 128 字符，可省略）。
+      responses:
+        '200':
+          description: 创建成功。data 中的空值字段会被省略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  session_id: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+                  external_ref: APPROVAL-2026-001
+                  active: false
+                  created_at: '2026-09-08T06:55:20Z'
+                  updated_at: '2026-09-08T06:55:20Z'
+        '400':
+          description: 参数不合法。错误码：5001003002（external_ref 超 128 字符，按 trim 后长度计；或 Bearer 的 Request-Id 格式非法）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001003002'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '401': *id005
+  /work/openapi/v1/chat:
+    post:
+      tags:
+      - 03 业务 会话
+      summary: 发起异步对话
+      operationId: runChat
+      x-permission-code: kwork-server:lingee.chat.run
+      description: '建立执行并发起生成后立即返回 HTTP 202、Retry-After: 2 与 task_id（status 为 running），不阻塞等待生成完成。
+
+
+        【前置条件·实测】本接口要求该会话已有一路存活的 SSE 连接：必须先调用 GET /work/openapi/v1/session/{sessionId}/event 建立事件流并保持连接，再发起对话。未建立、或连接已断开时，响应体返回 code=5001093001、message="SSE 路由未注册，请先调用 sse_register"；该错误可能以 HTTP 202 返回——202 只代表请求被受理，不代表执行已启动，必须以响应体 code 是否为 "0" 判定成功。
+
+
+        结果获取：SSE 连接会实时收到本轮流式事件；同时可用 task_id 调用「轮询对话执行结果」取终态，两者可并用。响应返回的完整 event_id 通常形如 {session_id}_{原始 token}，可能超过 91 字符，不能保证可直接作为重连参数——请保留最初提交的 token。
+
+
+        提供 Request-Id 时作为业务幂等键（16–128 位 URL-safe）；键复用但参数不一致返回 409 与 5001303002。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: event_id
+        in: query
+        required: false
+        description: 显式指定 SSE 事件流标识，长度 8–91，仅允许 A-Z a-z 0-9 - _ . ~。须先用同一 event_id 建立事件流连接再发起对话，否则事件无法送达该连接；不传则由服务端生成并在响应 event_id 返回。
+        schema: &id006
+          type: string
+          minLength: 8
+          maxLength: 91
+          pattern: ^[A-Za-z0-9._~-]+$
+        example: evt-20260908-0001
+      - *id001
+      - *id004
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '发起异步对话请求体。建立执行后立即返回 HTTP 202 与 task_id，不等待生成完成。
+
+                注意 tools 的「不传」与「传空数组」语义不同：不传表示沿用会话既有工具集，传 [] 表示本轮不使用任何工具。'
+              required:
+              - query
+              properties:
+                query:
+                  type: string
+                  maxLength: 20000
+                  description: 用户问题，上限 20000 字符（服务端可配），超长返回 400 与 5001003002。
+                  example: 汇总本月销售数据并生成摘要
+                session_id:
+                  type: string
+                  description: 目标会话 ID；缺省则自动新建会话。
+                  example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+                assistant_id:
+                  type: string
+                  description: 本轮生效的智能体，取值来自查询可用智能体接口的 id；缺省沿用会话当前搭档，非法值返回 403 与 5001033010。
+                  example: '2089566466853781506'
+                skill_names:
+                  type: array
+                  items:
+                    type: string
+                  description: 技能名称列表（填 name 而非 id），取值来自查询可用技能接口。误传 id 会被静默忽略，请求不报错但技能不生效。
+                  example:
+                  - monthly-report
+                tools:
+                  type: array
+                  items:
+                    type: string
+                  description: 本轮可用工具 ID 列表，取值来自查询可用工具接口的 id。不传表示不限制（沿用会话既有工具集）；传空数组表示本轮不使用任何工具。内置 ERP 工具（如 Kingdee-SaaS）也须显式列出才生效。
+                  example:
+                  - Kingdee-SaaS
+                inboxs:
+                  type: array
+                  items:
+                    type: object
+                    description: 附件引用，取自上传附件接口返回。
+                    required:
+                    - inbox_id
+                    - filename
+                    properties:
+                      inbox_id:
+                        type: string
+                        description: 附件引用 ID，取上传接口返回的 inbox_id。
+                        example: inb_001
+                      filename:
+                        type: string
+                        description: 文件名，必须原样回传上传接口返回的 filename（重名时带 (1) 后缀）。
+                        example: 报表.xlsx
+                      mime:
+                        type: string
+                        description: MIME 类型，取上传接口返回的 mime。
+                        example: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+                  description: 附件引用列表，取自上传会话附件接口的返回，filename 须原样回传。
+                model:
+                  type: string
+                  description: 逻辑模型 ID，取值来自查询租户可选模型接口的 id，形如 work/expert/HSP_INF。缺省或传 auto 使用服务端默认；必须为三段格式，否则返回 400 与 5001043005。
+                  example: work/expert/HSP_INF
+                external_ref:
+                  type: string
+                  maxLength: 128
+                  description: 业务键，仅在自动新建会话时写入；已传 session_id 时本字段不生效。上限 128 字符。
+                  example: APPROVAL-2026-001
+            example:
+              query: 汇总本月销售数据并生成摘要
+              session_id: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+              assistant_id: '2089566466853781506'
+              skill_names:
+              - monthly-report
+              tools:
+              - Kingdee-SaaS
+              inboxs:
+              - inbox_id: inb_001
+                filename: 报表.xlsx
+                mime: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+              model: work/expert/HSP_INF
+              external_ref: APPROVAL-2026-001
+        required: true
+        description: JSON 请求体，上面 8 个字段即完整结构（仅 query 必填）。示例里把全部字段都写出来了，实际发送前请删掉用不到的：尤其 inboxs（需真实上传返回的 inbox_id）、assistant_id、tools 若填了不存在的值会分别返回 404 与 403。注意 tools 不传与传空数组语义不同，详见字段说明。
+      responses:
+        '202':
+          description: '已受理。异步提交后为非终态，data 仅含已确定字段。配合 Retry-After 轮询「查询对话执行结果」。
+
+            注意：202 只表示请求已被接收，不保证执行已启动。未建立 SSE 连接时，本接口可能以 202 返回 code=5001093001（SSE 路由未注册），因此必须以响应体 code 是否为 "0" 判定成功。'
+          headers:
+            Retry-After:
+              description: 建议的轮询间隔秒数，示例为 2。
+              schema:
+                type: string
+              example: '2'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatSubmitEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  task_id: '1268219805353772032'
+                  session_id: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+                  status: running
+                  created_at: '2026-09-08T06:55:20Z'
+                  started_at: '2026-09-08T06:55:20Z'
+                  event_id: 34caa001-a5d3-4a14-98b9-54ce0cd1b245_evt-20260908-0001
+        '400':
+          description: 参数不合法。错误码：5001003001（query 缺失）、5001003002（query 超 20000 字符，或 event_id、external_ref、Bearer Request-Id 等参数格式/长度不合法——按 message 定位字段）、5001043005（model 不是三段格式，须取自查询租户可选模型的 id）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001003001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '401': *id005
+        '403':
+          description: 无权限或资源不可用。错误码：5001033010（智能体不可用/未授权/对执行用户不可见）、5001023029（技能不可用或未授权）、5001093005（点数不足或无可用席位）、5001053004（会话已归档，不能再发消息）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001033010'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '404':
+          description: tools 中的工具未激活或未授权（5001143001）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001143001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '409':
+          description: 冲突。错误码：5001303001（该会话已有正在运行的任务）、5001303002（Request-Id 幂等键复用且参数不一致）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001303001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '429':
+          description: 并发执行数超过租户上限（5001303003），退避后重试。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001303003'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '500':
+          description: 服务异常（5001001001）。重试或携带 Request-Id 联系平台侧排查。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001001001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '503':
+          description: 事件流未就绪（5001093001）。实测该错误也可能以 HTTP 202 + 业务码的形式返回，message 为 "SSE 路由未注册，请先调用 sse_register"。须先按「订阅 SSE 实时事件」建立并保持连接，再重新发起对话。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001093001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/task/{taskId}:
+    get:
+      tags:
+      - 03 业务 会话
+      summary: 轮询对话执行结果
+      operationId: getChatTask
+      x-permission-code: kwork-server:lingee.task.read
+      description: 按 taskId（取自发起异步对话响应的 task_id）查询本轮结果。终态返回 200，非终态返回 202 与 Retry-After。建议轮询间隔大于 2 秒并优先遵循 Retry-After；收到终态（completed、failed、expired、stopped）即停止轮询。
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: 本轮执行标识，取自发起异步对话响应的 task_id。
+        schema:
+          type: string
+        example: '1268219805353772032'
+      - &id007
+        name: tool_calls
+        in: query
+        required: false
+        description: 是否返回工具调用明细，缺省 false。
+        schema:
+          type: boolean
+          default: false
+        example: true
+      - &id008
+        name: reasoning
+        in: query
+        required: false
+        description: 是否返回思考过程，缺省 true。
+        schema:
+          type: boolean
+          default: true
+        example: true
+      - &id009
+        name: todo
+        in: query
+        required: false
+        description: 是否返回任务清单，缺省 false。
+        schema:
+          type: boolean
+          default: false
+        example: true
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 终态。data 中的空值字段省略；answer、artifacts、credits 等仅终态有值。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResultEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850659000
+                data:
+                  task_id: '1268219805353772032'
+                  session_id: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+                  message_id: msg_abc
+                  answer: 已完成汇总……
+                  status: completed
+                  artifacts:
+                  - artifact_id: art_001
+                    session_id: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+                    filename: 经营汇总.xlsx
+                    size: 20480
+                    stage: final
+                  created_at: '2026-09-08T06:55:20Z'
+                  started_at: '2026-09-08T06:55:21Z'
+                  completed_at: '2026-09-08T06:57:39Z'
+        '202':
+          description: 非终态（queued 或 running）。按 Retry-After 继续轮询。
+          headers:
+            Retry-After:
+              description: 建议的轮询间隔秒数。
+              schema:
+                type: string
+              example: '2'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResultEnvelope'
+        '401': *id005
+        '404':
+          description: task 不存在或不属于当前执行用户（5001053009）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001053009'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/session/{sessionId}/event:
+    get:
+      tags:
+      - 03 业务 会话
+      summary: 订阅 SSE 实时事件
+      operationId: subscribeSessionEvents
+      x-permission-code: kwork-server:lingee.session.event
+      description: '以 SSE 订阅本会话的流式消息推送，事件格式与 WebUI 收到的一致。会话必须属于当前执行用户。
+
+
+        【对话的前置条件·实测】发起异步对话前，必须先建立本连接并保持存活。未建立或连接已断开时，发起对话会返回 5001093001（SSE 路由未注册，请先调用 sse_register），该错误可能以 HTTP 202 返回。因此标准链路是：创建会话 → 建立本连接 → 发起对话 → 收流。
+
+
+        响应 Content-Type 为 text/event-stream，不包裹统一响应信封。每条消息以 data: 加一段 JSON 开头、空行结束；事件类别由 JSON 的 type 字段区分，不依赖 SSE 的 event: 行。所有事件共用信封 { type, properties }，标识字段为小驼峰 sessionID、messageID、turnID。
+
+
+        事件类型：server.connected、server.heartbeat、session.status、session.updated、message.updated、message.part.updated、message.part.delta、session.idle。
+
+
+        典型顺序：server.connected → session.status(busy) → 用户 message.updated 与其 part → 可选 session.updated → assistant message.updated 与其 part 流 → session.idle → session.status(idle)。server.heartbeat 可插入任意位置。
+
+
+        客户端处理要求：session.updated、session.idle、session.status(idle) 都可能重复，须对重复终态做幂等处理；收到同一 part 的最终快照（通常带 time.end）后以该快照的 text 覆盖本地累积值；未知事件 type、未知 part.type 或额外字段应忽略，以保持前向兼容。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: 会话 ID，取自创建会话的响应。
+        schema:
+          type: string
+        example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+      - name: event_id
+        in: query
+        required: true
+        description: 事件流标识，长度 8–91，仅允许 A-Z a-z 0-9 - _ . ~。用于把事件订阅与后续同一 eventid 的对话绑定到同一服务实例；须先连接本接口，再用同一 event_id 发起对话。
+        schema: *id006
+        example: evt-20260908-0001
+      - *id001
+      responses:
+        '200':
+          description: 'SSE 事件流，长连接持续推送。以下为文本 part 的快照与增量示例（实际为逐行 data: 输出）。'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: 'data: {"type":"server.connected","properties":{}}
+
+
+                data: {"type":"session.status","properties":{"sessionID":"34caa001-a5d3-4a14-98b9-54ce0cd1b245","status":{"type":"busy"}}}
+
+
+                data: {"type":"message.part.updated","properties":{"part":{"id":"prt_text_01","sessionID":"34caa001-a5d3-4a14-98b9-54ce0cd1b245","messageID":"msg_abc","type":"text","text":"","time":{"start":1788850520100}}}}
+
+
+                data: {"type":"message.part.delta","properties":{"sessionID":"34caa001-a5d3-4a14-98b9-54ce0cd1b245","messageID":"msg_abc","partID":"prt_text_01","field":"text","delta":"已完成"}}
+
+
+                data: {"type":"session.idle","properties":{"sessionID":"34caa001-a5d3-4a14-98b9-54ce0cd1b245"}}'
+        '401': *id005
+        '404':
+          description: 会话不存在或不属于当前执行用户（5001053001）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001053001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '503':
+          description: 事件流连接失效（5001093001 或 5001233081），须重新建立连接后再发起对话。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001093001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/session/{sessionId}/stop:
+    post:
+      tags:
+      - 03 业务 会话
+      summary: 停止会话执行
+      operationId: stopSession
+      x-permission-code: kwork-server:lingee.chat.stop
+      description: '中止会话当前进行中的一轮生成，并把活动执行置为 stopped。无 Query 参数与请求体，会话必须属于当前执行用户。
+
+
+        会话无进行中的对话时为幂等空操作，响应 data 仅含 session_id 与 status（值为 idle）；若生成恰好已完成，则返回其真实终态，不会把 completed 改写为 stopped。
+
+
+        本接口即使携带 Request-Id 也只用于追踪，当前不提供基于该头的业务幂等承诺。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: 会话 ID，取自创建会话的响应。
+        schema:
+          type: string
+        example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 停止结果。data 结构同轮询对话执行结果，仅返回关键字段。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopSessionEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  task_id: '1268219805353772032'
+                  session_id: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+                  status: stopped
+        '401': *id005
+        '404':
+          description: 会话不存在或不属于当前执行用户（5001053001）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001053001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/session/{sessionId}/inbox:
+    post:
+      tags:
+      - 03 业务 会话
+      summary: 上传会话附件
+      operationId: uploadSessionAttachment
+      x-permission-code: kwork-server:lingee.inbox.upload
+      description: '会话级 multipart/form-data 接口。上传后把返回的 inbox_id 与 filename 原样回传到发起对话的 inboxs。会话必须属于当前执行用户。
+
+
+        表单字段名固定为 files，可传多个。单个文件上限 100 MB，单次请求全部文件合计上限 100 MB（均可配）；文件个数无显式上限，受合计大小约束。超限由容器层拦截，返回 413 或 400，不进入业务逻辑。
+
+
+        注意：本接口使用表单上传，不是 JSON，也没有 body 哈希或 UNSIGNED-PAYLOAD 头要求。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: 会话 ID，取自创建会话的响应。
+        schema:
+          type: string
+        example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+      - *id001
+      - *id004
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: 附件文件，可传多个。单个与单次合计均上限 100 MB（可配）。
+            encoding:
+              files:
+                style: form
+                explode: true
+      responses:
+        '200':
+          description: 上传成功。data 为数组，顺序与上传分片一致。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                - inbox_id: inb_001
+                  filename: 报表.xlsx
+                  mime: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+                  size: 20480
+                - inbox_id: inb_002
+                  filename: 附件说明.docx
+                  mime: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+                  size: 10240
+        '400':
+          description: files 为空（5001003001），或文件超限被容器层拦截。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001003001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '401': *id005
+        '404':
+          description: 会话不存在或不属于当前执行用户（5001053001）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001053001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '413':
+          description: 单个文件或本次请求合计超过 100 MB（可配），由容器层拦截，不进入业务逻辑。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /work/openapi/v1/session/{sessionId}/artifact/{artifactId}:
+    get:
+      tags:
+      - 03 业务 会话
+      summary: 下载会话产物
+      operationId: downloadArtifact
+      x-permission-code: kwork-server:lingee.artifact.download
+      description: '下载指定会话产物的二进制内容。路径参数 sessionId 与 artifactId 取自轮询结果的 artifacts，也可取自 SSE 的 artifact 类 part。无 Query 参数与请求体。
+
+
+        归属校验：本应用经 OpenAPI 创建的会话，以及本应用经 OpenAPI 触发的定时任务执行会话，其产物均可下载，满足其一即可；都不满足时返回 404，且不区分「不存在」与「越权」。
+
+
+        响应不包裹统一响应信封，直接返回产物字节；文件名以 RFC 5987 编码放在 Content-Disposition 中。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: 会话 ID，取自轮询结果 artifacts 中的 session_id。
+        schema:
+          type: string
+        example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+      - name: artifactId
+        in: path
+        required: true
+        description: 产物标识，取自轮询结果 artifacts 中的 artifact_id。
+        schema:
+          type: string
+        example: art_001
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 产物字节流，不包裹统一响应信封。
+          headers:
+            Content-Type:
+              description: 产物 MIME，缺省 application/octet-stream。
+              schema:
+                type: string
+              example: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+            Content-Disposition:
+              description: 以 RFC 5987 编码文件名，客户端据此落盘。
+              schema:
+                type: string
+              example: attachment; filename*=UTF-8''%E7%BB%8F%E8%90%A5%E6%B1%87%E6%80%BB.xlsx
+            Content-Length:
+              description: 产物字节数。
+              schema:
+                type: string
+              example: '20480'
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401': *id005
+        '404':
+          description: 错误码：5001053001（会话不存在或不属于当前执行用户）、5001063002（产物不存在或不属于当前会话，响应不回显 artifactId）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001053001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/scheduled-tasks:
+    get:
+      tags:
+      - 04 业务 定时任务
+      summary: 查询本人定时任务
+      operationId: listScheduledTasks
+      x-permission-code: kwork-server:lingee.scheduled.list
+      description: 返回当前执行用户创建的定时任务。定时任务三个接口都严格限定在当前执行用户维度：列表只返回该用户创建的任务，触发与查询执行记录都只允许操作本人任务。
+      security:
+      - BearerAuth: []
+      parameters:
+      - *id002
+      - *id003
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 成功。data 为分页信封，records 中空值或 0 值字段会被省略。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledTaskPageEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  records:
+                  - id: '123456789012345678'
+                    name: 每日播报
+                    prompt: 汇总昨日经营数据并生成摘要
+                    plan: daily
+                    execution_time: 09:30
+                    status: enabled
+                    run_status: pending
+                    next_fire_time: '2026-09-09T01:30:00Z'
+                    created_at: '2026-09-07T08:00:00Z'
+                    updated_at: '2026-09-07T08:00:00Z'
+                  total: 1
+                  page: 1
+                  pageSize: 50
+        '401': *id005
+  /work/openapi/v1/scheduled-task/trigger:
+    post:
+      tags:
+      - 04 业务 定时任务
+      summary: 触发定时任务执行
+      operationId: triggerScheduledTask
+      x-permission-code: kwork-server:lingee.scheduled.trigger
+      description: '入队一条手动执行记录并把任务运行状态置为 running 后立即返回，不阻塞等待任务实际执行完成；随后用响应的 run_id 查询单次任务执行结果轮询终态。
+
+
+        task_id 与 task_name 必须恰好给一个，都给或都不给返回 400。推荐使用 task_id：名称可被用户改动，且同名任务并发创建时无法唯一定位。
+
+
+        Bearer 调用时 Request-Id 不是鉴权必填项，建议携带用于追踪；本接口不承诺基于 Request-Id 幂等。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - *id001
+      - *id004
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '触发定时任务请求体。task_id 与 task_name 必须恰好给一个：都给或都不给返回 400 与 5001003002。
+
+                推荐使用 task_id —— 名称可被用户改动，且同名任务并发创建时无法唯一定位。名称两端空格会被忽略。'
+              properties:
+                task_id:
+                  type: string
+                  description: 任务 ID，取自查询本人定时任务的 id。与 task_name 二选一。
+                  example: '123456789012345678'
+                task_name:
+                  type: string
+                  maxLength: 256
+                  description: 任务名称，同一执行用户下唯一，上限 256 字符（按 trim 后长度计）。与 task_id 二选一。
+            example:
+              task_id: '123456789012345678'
+        required: true
+        description: JSON 请求体。task_id 与 task_name 必须恰好给一个，两者都给或都不给返回 400；示例用 task_id，若改用 task_name 请先删掉 task_id。
+      responses:
+        '200':
+          description: 已入队。data 中的 run_id 用于轮询执行结果。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledTriggerEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788850520000
+                data:
+                  task_id: '123456789012345678'
+                  run_id: '223456789012345678'
+                  run_status: running
+                  triggered: true
+        '400':
+          description: 参数不合法。错误码：5001003002（task_id 与 task_name 未恰好给一个，或 task_name 超 256 字符）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001003002'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '401': *id005
+        '403':
+          description: 错误码：5001113008（任务不属于当前执行用户）、5001093005（点数不足或无可用席位）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001113008'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '404':
+          description: 任务不存在或不属于当前用户（5001113001）；按名称触发时表示名称无匹配。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001113001'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '409':
+          description: 冲突。错误码：5001113006（同名任务多于一条，无法唯一定位，改用 task_id）、5001113005（已有手动执行进行中，稍后重试）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001113006'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+  /work/openapi/v1/scheduled-task/{runId}:
+    get:
+      tags:
+      - 04 业务 定时任务
+      summary: 查询单次任务执行结果
+      operationId: getScheduledTaskRun
+      x-permission-code: kwork-server:lingee.scheduled.run
+      description: '按 runId（取自触发定时任务的响应 run_id）查询该次执行结果，供轮询终态。运行中和终态均返回 HTTP 200，不返回 202，也不设置 Retry-After；调用方须根据 data.status 判断是否继续轮询。
+
+
+        记录所属任务必须属于当前执行用户：记录不存在返回 404，非本人任务返回 403。'
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        description: 本次执行记录 ID，取自触发定时任务的响应 run_id。
+        schema:
+          type: string
+        example: '223456789012345678'
+      - *id007
+      - *id008
+      - *id009
+      - *id001
+      - *id004
+      responses:
+        '200':
+          description: 查询成功。运行中与终态都返回 200，按 data.status 判断是否继续轮询。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledRunEnvelope'
+              example:
+                code: '0'
+                message: ''
+                timestamp: 1788831004000
+                data:
+                  task_id: '123456789012345678'
+                  session_id: '323456789012345678'
+                  message_id: '423456789012345678'
+                  status: completed
+                  answer: 已完成本次数据播报……
+                  created_at: '2026-09-08T01:30:00Z'
+                  started_at: '2026-09-08T01:30:01Z'
+                  completed_at: '2026-09-08T01:30:04Z'
+        '401': *id005
+        '403':
+          description: 记录所属任务不属于当前执行用户（5001113008）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001113008'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+        '404':
+          description: 错误码：5001113002（执行记录不存在）、5001113001（记录所属任务不存在或不属于当前用户）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                code: '5001113002'
+                message: 见响应描述中的错误码说明
+                timestamp: 1788850520000
+components:
+  schemas:
+    ErrorEnvelope:
+      type: object
+      description: 错误响应。统一响应信封，code 非 "0" 即为失败；具体错误码见各响应描述。
+      required:
+      - code
+      properties:
+        code:
+          type: string
+          description: 错误码，需按字符串比较（例如 "5001233082"）。
+          example: '5001233082'
+        message:
+          type: string
+          description: 平台给出的提示文案，内容随场景变化。
+        timestamp: &id010
+          type: integer
+          format: int64
+          description: 服务端 epoch 毫秒。
+          example: 1788850520000
+        data:
+          description: 失败时通常为空或省略。
+    AccessTokenEnvelope:
+      type: object
+      description: 令牌签发响应。access_token 明文仅本次返回。
+      required:
+      - code
+      properties:
+        code: &id011
+          type: string
+          description: 业务码。字符串 "0" 表示成功，其余为错误码，需按字符串比较。
+          example: '0'
+        message: &id012
+          type: string
+          description: 提示文案，成功时通常为空字符串；错误时为平台给出的可读说明。
+          example: ''
+        timestamp: *id010
+        data:
+          type: object
+          description: 令牌签发结果。access_token 明文仅在本次响应中返回，服务端不提供再次读取。
+          properties:
+            access_token:
+              type: string
+              description: 'AccessToken 明文，业务请求中放入 Authorization: Bearer <access_token>。'
+              example: lta_xxxxx
+            token_type:
+              type: string
+              description: 固定为 Bearer。
+              example: Bearer
+            expires_in:
+              type: integer
+              format: int64
+              description: 剩余有效秒数，默认 7200。
+              example: 7200
+            expires_at:
+              type: string
+              format: date-time
+              description: UTC 绝对过期时间。
+              example: '2026-09-08T12:30:00Z'
+    AgentsPageEnvelope:
+      type: object
+      description: 查询可用智能体的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 分页信封；内部字段沿用小驼峰命名。
+          properties:
+            records:
+              type: array
+              description: 智能体数组。
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: 智能体标识，填入发起对话的 assistant_id。
+                    example: '2089566466853781506'
+                  name:
+                    type: string
+                    description: 智能体名称。
+                    example: 企业知识中心
+                  displayName:
+                    type: string
+                    description: 展示名。
+                    example: 企业知识中心
+                  description:
+                    type: string
+                    description: 描述，可能为空。
+                    example: 企业知识中心
+            total:
+              type: integer
+              format: int64
+              description: 过滤后的总条数。
+              example: 1
+            page:
+              type: integer
+              format: int64
+              description: 回显本次页码。
+              example: 1
+            pageSize:
+              type: integer
+              format: int64
+              description: 回显本次每页条数。
+              example: 50
+    SkillsPageEnvelope:
+      type: object
+      description: 查询可用技能的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 分页信封；内部字段沿用小驼峰命名。
+          properties:
+            records:
+              type: array
+              description: 技能数组。
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: 技能标识，仅作标识用，不能填入 skill_names。
+                    example: '3011872366401228801'
+                  name:
+                    type: string
+                    description: 技能名称，填入发起对话的 skill_names。误传 id 会被静默忽略。
+                    example: monthly-report
+                  displayName:
+                    type: string
+                    description: 展示名。
+                    example: 月度报表助手
+                  description:
+                    type: string
+                    description: 描述，可能为空。
+                    example: 按模板生成月度经营报表
+            total:
+              type: integer
+              format: int64
+              description: 过滤后的总条数。
+              example: 1
+            page:
+              type: integer
+              format: int64
+              description: 回显本次页码。
+              example: 1
+            pageSize:
+              type: integer
+              format: int64
+              description: 回显本次每页条数。
+              example: 50
+    ToolsPageEnvelope:
+      type: object
+      description: 查询可用工具的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 分页信封；内部字段沿用小驼峰命名。
+          properties:
+            records:
+              type: array
+              description: 工具数组。
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: 工具标识，填入发起对话的 tools 数组。系统内置 ERP 工具（如 Kingdee-SaaS）也会出现在列表中，但必须显式放进 tools 才会生效。
+                    example: Kingdee-SaaS
+                  name:
+                    type: string
+                    description: 工具名称；目录服务暂不可用时退化为 id。
+                    example: 金蝶SaaS
+                  displayName:
+                    type: string
+                    description: 展示名；目录服务暂不可用时退化为 id。
+                    example: 金蝶SaaS
+                  description:
+                    type: string
+                    description: 描述，可能为空。
+                    example: Operate explicitly requested Kingdee SaaS ERP workflows.
+            total:
+              type: integer
+              format: int64
+              description: 过滤后的总条数。
+              example: 1
+            page:
+              type: integer
+              format: int64
+              description: 回显本次页码。
+              example: 1
+            pageSize:
+              type: integer
+              format: int64
+              description: 回显本次每页条数。
+              example: 50
+    ModelsEnvelope:
+      type: object
+      description: 查询租户可选模型的响应信封。当前环境未开放模型选择时 data 为空数组。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: 完整逻辑模型 ID，原样填入发起对话的 model。请整体取用，不要自行拼接三段；组合不匹配时服务端会静默回落为其他模型。
+                example: work/expert/HSP_INF
+              name:
+                type: string
+                description: 展示名，随 Accept-Language 变化。
+                example: 专家
+              displayName:
+                type: string
+                description: 展示名，即档位的本地化描述。
+                example: 专家
+              domain:
+                type: string
+                description: 领域段，OpenAPI 对话固定为 work。
+                example: work
+              modelLevel:
+                type: string
+                description: 档位段，如 auto、fast、deep、expert、ultra，也可能是具体模型名。
+                example: expert
+              subDomain:
+                type: string
+                description: 子领域段，同一租户下可能为 default、租户标识或 HSP_INF、STD_INF 等。
+                example: HSP_INF
+              modelLevelDesc:
+                type: string
+                description: 档位本地化描述，与 displayName 同值。
+                example: 专家
+              autoRouting:
+                type: boolean
+                description: 仅「自动」档位返回 true，表示由服务端按问题择优路由；其余条目不返回该字段。
+                example: true
+          description: 模型数组。data 直接为数组，没有 records 与 total 包装。
+    SessionEnvelope:
+      type: object
+      description: 创建会话的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 会话信息。空值字段会被省略。
+          properties:
+            session_id:
+              type: string
+              description: 会话标识（UUID），后续接口用它定位会话。
+              example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+            external_ref:
+              type: string
+              description: 回显业务键。
+              example: APPROVAL-2026-001
+            title:
+              type: string
+              description: 会话标题，首轮对话后由服务端自动生成，新建时可能为空。
+            active:
+              type: boolean
+              description: 是否有运行中的执行。
+              example: false
+            created_at: &id013
+              type: string
+              format: date-time
+              description: ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。
+              example: '2026-09-08T06:55:20Z'
+            updated_at:
+              type: string
+              format: date-time
+              description: 最后更新时间。
+              example: '2026-09-08T06:55:20Z'
+    ChatSubmitEnvelope:
+      type: object
+      description: 发起异步对话的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 异步提交结果，提交后为非终态，仅含已确定字段，其余空值省略。
+          properties:
+            task_id:
+              type: string
+              description: 本轮执行标识，用于轮询对话执行结果。
+              example: '1268219805353772032'
+            session_id:
+              type: string
+              description: 会话 ID；自动新建时为新会话的 ID。
+              example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+            status:
+              type: string
+              enum:
+              - running
+              description: 提交后恒为 running。
+              example: running
+            event_id:
+              type: string
+              description: 服务端粘性路由标识，通常形如 {session_id}_{原始 event_id token}。显式 SSE 场景请保留最初提交的 8–91 字符 token，完整返回值可能超过 91 字符，不能保证可直接作为重连参数。
+              example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245_evt-20260908-0001
+            created_at: *id013
+            started_at:
+              type: string
+              format: date-time
+              description: 执行启动时间。
+              example: '2026-09-08T06:55:20Z'
+    TaskResultEnvelope:
+      type: object
+      description: 对话执行结果的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 对话执行结果。空值字段省略；answer、artifacts、credits 等仅终态才有值。
+          properties:
+            task_id:
+              type: string
+              description: 本轮执行标识。
+              example: '1268219805353772032'
+            session_id:
+              type: string
+              description: 会话 ID。
+              example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+            title:
+              type: string
+              description: 会话标题。
+            message_id:
+              type: string
+              description: 本轮 assistant 消息 ID。
+              example: msg_abc
+            answer:
+              type: string
+              description: 本轮最终回答；仅终态有值。
+              example: 已完成汇总……
+            reasoning:
+              description: 思考过程；请求时 reasoning=true 且模型有输出时返回。结构以实际返回为准。
+            tool_calls:
+              type: array
+              items: &id014
+                type: object
+                description: 工具调用明细。
+                properties:
+                  tool:
+                    type: string
+                    description: 工具标识。
+                  call_id:
+                    type: string
+                    description: 调用标识。
+                  status:
+                    type: string
+                    description: 调用状态。
+                  arguments:
+                    description: 调用入参，结构随工具变化。
+                  result:
+                    description: 调用结果，结构随工具变化。
+              description: 工具调用明细；请求时 tool_calls=true 且本轮有工具调用时返回。
+            todos:
+              type: array
+              items: &id015
+                type: object
+                description: 任务清单条目。
+                properties:
+                  content:
+                    type: string
+                    description: 条目内容。
+                  status:
+                    type: string
+                    description: 条目状态。
+              description: 任务清单；请求时 todo=true 且本轮有任务清单时返回。
+            artifacts:
+              type: array
+              items: &id016
+                type: object
+                description: 产物条目。文件内容须调用下载会话产物接口获取。
+                properties:
+                  artifact_id:
+                    type: string
+                    description: 产物标识，填入下载接口的 artifactId。
+                    example: art_001
+                  session_id:
+                    type: string
+                    description: 会话 ID，填入下载接口的 sessionId。
+                    example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+                  filename:
+                    type: string
+                    description: 文件名。
+                    example: 经营汇总.xlsx
+                  mime:
+                    type: string
+                    description: MIME 类型。
+                    example: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+                  size:
+                    type: integer
+                    format: int64
+                    description: 字节数。
+                    example: 20480
+                  stage:
+                    type: string
+                    description: 产物阶段，如 final。
+                    example: final
+              description: 本轮产物；仅终态 completed 且有产物时返回。
+            status:
+              type: string
+              enum:
+              - queued
+              - running
+              - completed
+              - failed
+              - expired
+              - stopped
+              description: 执行状态。completed、failed、expired、stopped 为终态，收到后停止轮询。
+              example: completed
+            created_at: *id013
+            started_at:
+              type: string
+              format: date-time
+              description: 启动时间。
+              example: '2026-09-08T06:55:21Z'
+            completed_at:
+              type: string
+              format: date-time
+              description: 完成时间。
+              example: '2026-09-08T06:57:39Z'
+            error:
+              type: object
+              description: 错误详情，含 code 与 message；仅 failed、expired 时出现。
+              properties: &id017
+                code:
+                  type: string
+                  description: 错误码。
+                  example: '5001001001'
+                message:
+                  type: string
+                  description: 错误说明。
+            credits:
+              description: 本轮点数消耗；仅终态且已出账时返回。
+            event_id:
+              type: string
+              description: 服务端保存的粘性路由标识。显式 SSE 场景应继续使用最初提交的 event_id token。
+    StopSessionEnvelope:
+      type: object
+      description: 停止会话执行的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 停止结果。字段可能仅部分返回。
+          properties:
+            session_id:
+              type: string
+              description: 会话 ID。
+              example: 34caa001-a5d3-4a14-98b9-54ce0cd1b245
+            task_id:
+              type: string
+              description: 被中止的执行标识；无进行中对话时不返回。
+              example: '1268219805353772032'
+            status:
+              type: string
+              enum:
+              - stopped
+              - idle
+              - completed
+              - failed
+              - expired
+              description: stopped 表示已中止；idle 表示本无进行中的对话（幂等空操作）；completed 等终态表示生成已先行完成，不会把 completed 改写为 stopped。
+              example: stopped
+    InboxEnvelope:
+      type: object
+      description: 上传会话附件的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: array
+          items:
+            type: object
+            description: 上传成功的附件引用。
+            properties:
+              inbox_id:
+                type: string
+                description: 附件引用 ID，回传到发起对话的 inboxs。
+                example: inb_001
+              filename:
+                type: string
+                description: 落盘后的最终文件名，重名会带 (1) 后缀；回传时必须使用此值。
+                example: 报表.xlsx
+              mime:
+                type: string
+                description: MIME 类型。
+                example: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+              size:
+                type: integer
+                format: int64
+                description: 字节数。
+                example: 20480
+          description: 上传成功的附件数组，顺序与上传分片一致。
+    ScheduledTaskPageEnvelope:
+      type: object
+      description: 查询本人定时任务的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 分页信封；内部字段沿用小驼峰命名。
+          properties:
+            records:
+              type: array
+              description: 定时任务数组。
+              items:
+                type: object
+                description: 定时任务。空值或 0 值字段会被省略，字段可能缺失。
+                properties:
+                  id:
+                    type: string
+                    description: 任务 ID，字符串类型以避免 JS 精度截断；触发接口的 task_id 取此值。
+                    example: '123456789012345678'
+                  name:
+                    type: string
+                    description: 任务名称，同一执行用户下唯一。
+                    example: 每日播报
+                  prompt:
+                    type: string
+                    description: 任务执行的指令内容。
+                    example: 汇总昨日经营数据并生成摘要
+                  plan:
+                    type: string
+                    enum:
+                    - once
+                    - interval
+                    - daily
+                    - weekly
+                    - monthly
+                    description: 调度类型。
+                    example: daily
+                  interval_time:
+                    description: 间隔值，仅 plan 为 interval 时返回；单位与类型以实际返回为准。
+                  once_time:
+                    description: 单次执行时间，仅 plan 为 once 时返回。
+                  day_of_week:
+                    type: string
+                    description: 每周执行的星期，如 1,3,5，仅 plan 为 weekly 时返回。
+                    example: 1,3,5
+                  day_of_month:
+                    type: string
+                    description: 每月执行的日期，如 1,15，仅 plan 为 monthly 时返回。
+                    example: 1,15
+                  execution_time:
+                    type: string
+                    description: 每日、每周或每月的执行时刻，如 09:30。
+                    example: 09:30
+                  status:
+                    type: string
+                    enum:
+                    - enabled
+                    - disabled
+                    description: 启停状态。
+                    example: enabled
+                  run_status:
+                    type: string
+                    enum:
+                    - idle
+                    - pending
+                    - running
+                    description: 运行状态。
+                    example: pending
+                  next_fire_time:
+                    type: string
+                    format: date-time
+                    description: 下次触发时间，无后续触发时省略。
+                    example: '2026-09-09T01:30:00Z'
+                  last_fire_time:
+                    type: string
+                    format: date-time
+                    description: 上次触发时间，从未触发时省略。
+                  created_at: *id013
+                  updated_at:
+                    type: string
+                    format: date-time
+                    description: 最后更新时间。
+                    example: '2026-09-07T08:00:00Z'
+            total:
+              type: integer
+              format: int64
+              description: 过滤后的总条数。
+              example: 1
+            page:
+              type: integer
+              format: int64
+              description: 回显本次页码。
+              example: 1
+            pageSize:
+              type: integer
+              format: int64
+              description: 回显本次每页条数。
+              example: 50
+    ScheduledTriggerEnvelope:
+      type: object
+      description: 触发定时任务的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 触发结果。接口入队后立即返回，不等待任务执行完成。
+          properties:
+            task_id:
+              type: string
+              description: 被触发的任务 ID。
+              example: '123456789012345678'
+            run_id:
+              type: string
+              description: 本次执行记录 ID，用于查询单次任务执行结果。
+              example: '223456789012345678'
+            run_status:
+              type: string
+              enum:
+              - running
+              description: 触发后运行状态，恒为 running。
+              example: running
+            triggered:
+              type: boolean
+              description: 是否已成功入队触发。
+              example: true
+    ScheduledRunEnvelope:
+      type: object
+      description: 单次定时任务执行结果的响应信封。
+      required:
+      - code
+      properties:
+        code: *id011
+        message: *id012
+        timestamp: *id010
+        data:
+          type: object
+          description: 单次定时任务执行结果。运行中和终态均返回 HTTP 200，须按 data.status 判断是否继续轮询。
+          properties:
+            task_id:
+              type: string
+              description: 所属定时任务 ID。
+              example: '123456789012345678'
+            session_id:
+              type: string
+              description: 本次执行的会话 ID。
+              example: '323456789012345678'
+            message_id:
+              type: string
+              description: 本次执行产生的 assistant 消息 ID。
+              example: '423456789012345678'
+            status:
+              type: string
+              enum:
+              - queued
+              - running
+              - completed
+              - failed
+              - stopped
+              description: 执行状态。
+              example: completed
+            answer:
+              type: string
+              description: 本次执行的最终回答；仅成功终态有值。
+              example: 已完成本次数据播报……
+            reasoning:
+              description: 思考过程；请求时 reasoning=true 且模型有输出时返回。结构以实际返回为准。
+            tool_calls:
+              type: array
+              items: *id014
+              description: 工具调用明细；请求时 tool_calls=true 且本次有工具调用时返回。
+            todos:
+              type: array
+              items: *id015
+              description: 任务清单；请求时 todo=true 且本次有任务清单时返回。
+            credits:
+              description: 本次执行的点数消耗；仅成功终态且已出账时返回。
+            artifacts:
+              type: array
+              items: *id016
+              description: 本次执行产生的产物列表；仅成功终态且有产物时返回。
+            created_at: *id013
+            started_at:
+              type: string
+              format: date-time
+              description: 开始执行时间，运行开始后返回。
+              example: '2026-09-08T01:30:01Z'
+            completed_at:
+              type: string
+              format: date-time
+              description: 完成时间；仅终态有值。
+              example: '2026-09-08T01:30:04Z'
+            error:
+              type: object
+              description: 错误详情，含 message；仅 failed 时出现。
+              properties: *id017
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 令牌值填 {{lingee_access_token}}，只填令牌本身，不要再写 Bearer 前缀。业务请求不得携带任何 X-Lingee-OpenApi-* 签名头或用户身份头，混用凭证会被拒绝（401 / 5001233082）。

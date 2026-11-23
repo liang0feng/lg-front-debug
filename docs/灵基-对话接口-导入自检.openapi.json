@@ -1,0 +1,455 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "灵基 OpenAPI · 对话接口导入自检",
+    "version": "3.1.0",
+    "description": "仅含「发起异步对话」一个接口的自检文件，用于排查 Apifox 导入后请求体为空的问题。\n\n导入后打开该接口的 Body 页签，应能看到 query、session_id、assistant_id、skill_names、tools、inboxs、model、external_ref 共 8 个字段，并带一份完整示例。\n\n若空项目导入后仍为空，说明是导入器解析问题，不是文件内容问题。"
+  },
+  "tags": [
+    {
+      "name": "01 认证 换取 AccessToken",
+      "description": "应用凭证换取 AccessToken（HMAC 签名，唯一非 Bearer 接口）。"
+    },
+    {
+      "name": "02 业务 资源查询",
+      "description": "智能体、技能、工具、模型等资源查询，均为 GET。"
+    },
+    {
+      "name": "03 业务 会话",
+      "description": "会话创建、异步对话、结果轮询、SSE 订阅、停止、附件上传与产物下载。"
+    },
+    {
+      "name": "04 业务 定时任务",
+      "description": "定时任务列表、触发与单次执行结果查询。"
+    }
+  ],
+  "servers": [],
+  "security": [],
+  "paths": {
+    "/work/openapi/v1/chat": {
+      "post": {
+        "tags": [
+          "03 业务 会话"
+        ],
+        "summary": "发起异步对话",
+        "operationId": "runChat",
+        "x-permission-code": "kwork-server:lingee.chat.run",
+        "description": "建立执行并发起生成后立即返回 HTTP 202、Retry-After: 2 与 task_id（status 为 running），不阻塞等待生成完成。\n\n【前置条件·实测】本接口要求该会话已有一路存活的 SSE 连接：必须先调用 GET /work/openapi/v1/session/{sessionId}/event 建立事件流并保持连接，再发起对话。未建立、或连接已断开时，响应体返回 code=5001093001、message=\"SSE 路由未注册，请先调用 sse_register\"；该错误可能以 HTTP 202 返回——202 只代表请求被受理，不代表执行已启动，必须以响应体 code 是否为 \"0\" 判定成功。\n\n结果获取：SSE 连接会实时收到本轮流式事件；同时可用 task_id 调用「轮询对话执行结果」取终态，两者可并用。响应返回的完整 event_id 通常形如 {session_id}_{原始 token}，可能超过 91 字符，不能保证可直接作为重连参数——请保留最初提交的 token。\n\n提供 Request-Id 时作为业务幂等键（16–128 位 URL-safe）；键复用但参数不一致返回 409 与 5001303002。",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "query",
+            "required": false,
+            "description": "显式指定 SSE 事件流标识，长度 8–91，仅允许 A-Z a-z 0-9 - _ . ~。须先用同一 event_id 建立事件流连接再发起对话，否则事件无法送达该连接；不传则由服务端生成并在响应 event_id 返回。",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 91,
+              "pattern": "^[A-Za-z0-9._~-]+$"
+            },
+            "example": "evt-20260908-0001"
+          },
+          {
+            "name": "X-Tenant-Id",
+            "in": "header",
+            "required": true,
+            "description": "应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{lingee_tenant_id}}"
+          },
+          {
+            "name": "Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。",
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._~-]+$"
+            },
+            "example": "{{lingee_request_id}}"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "发起异步对话请求体。建立执行后立即返回 HTTP 202 与 task_id，不等待生成完成。\n注意 tools 的「不传」与「传空数组」语义不同：不传表示沿用会话既有工具集，传 [] 表示本轮不使用任何工具。",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "maxLength": 20000,
+                    "description": "用户问题，上限 20000 字符（服务端可配），超长返回 400 与 5001003002。",
+                    "example": "汇总本月销售数据并生成摘要"
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "description": "目标会话 ID；缺省则自动新建会话。",
+                    "example": "34caa001-a5d3-4a14-98b9-54ce0cd1b245"
+                  },
+                  "assistant_id": {
+                    "type": "string",
+                    "description": "本轮生效的智能体，取值来自查询可用智能体接口的 id；缺省沿用会话当前搭档，非法值返回 403 与 5001033010。",
+                    "example": "2089566466853781506"
+                  },
+                  "skill_names": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "技能名称列表（填 name 而非 id），取值来自查询可用技能接口。误传 id 会被静默忽略，请求不报错但技能不生效。",
+                    "example": [
+                      "monthly-report"
+                    ]
+                  },
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "本轮可用工具 ID 列表，取值来自查询可用工具接口的 id。不传表示不限制（沿用会话既有工具集）；传空数组表示本轮不使用任何工具。内置 ERP 工具（如 Kingdee-SaaS）也须显式列出才生效。",
+                    "example": [
+                      "Kingdee-SaaS"
+                    ]
+                  },
+                  "inboxs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "description": "附件引用，取自上传附件接口返回。",
+                      "required": [
+                        "inbox_id",
+                        "filename"
+                      ],
+                      "properties": {
+                        "inbox_id": {
+                          "type": "string",
+                          "description": "附件引用 ID，取上传接口返回的 inbox_id。",
+                          "example": "inb_001"
+                        },
+                        "filename": {
+                          "type": "string",
+                          "description": "文件名，必须原样回传上传接口返回的 filename（重名时带 (1) 后缀）。",
+                          "example": "报表.xlsx"
+                        },
+                        "mime": {
+                          "type": "string",
+                          "description": "MIME 类型，取上传接口返回的 mime。",
+                          "example": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        }
+                      }
+                    },
+                    "description": "附件引用列表，取自上传会话附件接口的返回，filename 须原样回传。"
+                  },
+                  "model": {
+                    "type": "string",
+                    "description": "逻辑模型 ID，取值来自查询租户可选模型接口的 id，形如 work/expert/HSP_INF。缺省或传 auto 使用服务端默认；必须为三段格式，否则返回 400 与 5001043005。",
+                    "example": "work/expert/HSP_INF"
+                  },
+                  "external_ref": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "业务键，仅在自动新建会话时写入；已传 session_id 时本字段不生效。上限 128 字符。",
+                    "example": "APPROVAL-2026-001"
+                  }
+                }
+              },
+              "example": {
+                "query": "汇总本月销售数据并生成摘要",
+                "session_id": "34caa001-a5d3-4a14-98b9-54ce0cd1b245",
+                "assistant_id": "2089566466853781506",
+                "skill_names": [
+                  "monthly-report"
+                ],
+                "tools": [
+                  "Kingdee-SaaS"
+                ],
+                "inboxs": [
+                  {
+                    "inbox_id": "inb_001",
+                    "filename": "报表.xlsx",
+                    "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  }
+                ],
+                "model": "work/expert/HSP_INF",
+                "external_ref": "APPROVAL-2026-001"
+              }
+            }
+          },
+          "required": true,
+          "description": "JSON 请求体，上面 8 个字段即完整结构（仅 query 必填）。示例里把全部字段都写出来了，实际发送前请删掉用不到的：尤其 inboxs（需真实上传返回的 inbox_id）、assistant_id、tools 若填了不存在的值会分别返回 404 与 403。注意 tools 不传与传空数组语义不同，详见字段说明。"
+        },
+        "responses": {
+          "202": {
+            "description": "已受理。异步提交后为非终态，data 仅含已确定字段。配合 Retry-After 轮询「查询对话执行结果」。\n注意：202 只表示请求已被接收，不保证执行已启动。未建立 SSE 连接时，本接口可能以 202 返回 code=5001093001（SSE 路由未注册），因此必须以响应体 code 是否为 \"0\" 判定成功。",
+            "headers": {
+              "Retry-After": {
+                "description": "建议的轮询间隔秒数，示例为 2。",
+                "schema": {
+                  "type": "string"
+                },
+                "example": "2"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSubmitEnvelope"
+                },
+                "example": {
+                  "code": "0",
+                  "message": "",
+                  "timestamp": 1788850520000,
+                  "data": {
+                    "task_id": "1268219805353772032",
+                    "session_id": "34caa001-a5d3-4a14-98b9-54ce0cd1b245",
+                    "status": "running",
+                    "created_at": "2026-09-08T06:55:20Z",
+                    "started_at": "2026-09-08T06:55:20Z",
+                    "event_id": "34caa001-a5d3-4a14-98b9-54ce0cd1b245_evt-20260908-0001"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法。错误码：5001003001（query 缺失）、5001003002（query 超 20000 字符，或 event_id、external_ref、Bearer Request-Id 等参数格式/长度不合法——按 message 定位字段）、5001043005（model 不是三段格式，须取自查询租户可选模型的 id）。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001003001",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001233082",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限或资源不可用。错误码：5001033010（智能体不可用/未授权/对执行用户不可见）、5001023029（技能不可用或未授权）、5001093005（点数不足或无可用席位）、5001053004（会话已归档，不能再发消息）。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001033010",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "tools 中的工具未激活或未授权（5001143001）。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001143001",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "冲突。错误码：5001303001（该会话已有正在运行的任务）、5001303002（Request-Id 幂等键复用且参数不一致）。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001303001",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "并发执行数超过租户上限（5001303003），退避后重试。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001303003",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务异常（5001001001）。重试或携带 Request-Id 联系平台侧排查。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001001001",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "事件流未就绪（5001093001）。实测该错误也可能以 HTTP 202 + 业务码的形式返回，message 为 \"SSE 路由未注册，请先调用 sse_register\"。须先按「订阅 SSE 实时事件」建立并保持连接，再重新发起对话。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "code": "5001093001",
+                  "message": "见响应描述中的错误码说明",
+                  "timestamp": 1788850520000
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "description": "错误响应。统一响应信封，code 非 \"0\" 即为失败；具体错误码见各响应描述。",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "错误码，需按字符串比较（例如 \"5001233082\"）。",
+            "example": "5001233082"
+          },
+          "message": {
+            "type": "string",
+            "description": "平台给出的提示文案，内容随场景变化。"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "服务端 epoch 毫秒。",
+            "example": 1788850520000
+          },
+          "data": {
+            "description": "失败时通常为空或省略。"
+          }
+        }
+      },
+      "ChatSubmitEnvelope": {
+        "type": "object",
+        "description": "发起异步对话的响应信封。",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "业务码。字符串 \"0\" 表示成功，其余为错误码，需按字符串比较。",
+            "example": "0"
+          },
+          "message": {
+            "type": "string",
+            "description": "提示文案，成功时通常为空字符串；错误时为平台给出的可读说明。",
+            "example": ""
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "服务端 epoch 毫秒。",
+            "example": 1788850520000
+          },
+          "data": {
+            "type": "object",
+            "description": "异步提交结果，提交后为非终态，仅含已确定字段，其余空值省略。",
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "description": "本轮执行标识，用于轮询对话执行结果。",
+                "example": "1268219805353772032"
+              },
+              "session_id": {
+                "type": "string",
+                "description": "会话 ID；自动新建时为新会话的 ID。",
+                "example": "34caa001-a5d3-4a14-98b9-54ce0cd1b245"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "running"
+                ],
+                "description": "提交后恒为 running。",
+                "example": "running"
+              },
+              "event_id": {
+                "type": "string",
+                "description": "服务端粘性路由标识，通常形如 {session_id}_{原始 event_id token}。显式 SSE 场景请保留最初提交的 8–91 字符 token，完整返回值可能超过 91 字符，不能保证可直接作为重连参数。",
+                "example": "34caa001-a5d3-4a14-98b9-54ce0cd1b245_evt-20260908-0001"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。",
+                "example": "2026-09-08T06:55:20Z"
+              },
+              "started_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "执行启动时间。",
+                "example": "2026-09-08T06:55:20Z"
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "令牌值填 {{lingee_access_token}}，只填令牌本身，不要再写 Bearer 前缀。业务请求不得携带任何 X-Lingee-OpenApi-* 签名头或用户身份头，混用凭证会被拒绝（401 / 5001233082）。"
+      }
+    }
+  }
+}

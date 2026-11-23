@@ -1,0 +1,15 @@
+{
+  "name": "lg-front-debug",
+  "version": "1.0.0",
+  "private": true,
+  "description": "灵基 OpenAPI 对话调试台：SSE 优先 / 轮询兜底、多会话并行、Markdown、资源缓存、移动端",
+  "scripts": {
+    "start": "node start.js",
+    "serve": "node server.js",
+    "test": "node test/selftest.mjs"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "UNLICENSED"
+}

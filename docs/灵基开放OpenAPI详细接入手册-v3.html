@@ -1,0 +1,1810 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>灵基 OpenAPI 详细接入手册 v3</title>
+<style>
+:root{
+  --ink:#17263c; --muted:#5d7391; --line:#d7e2f0; --bg:#f2f6fb; --card:#fff;
+  --navy:#0e2b52; --accent:#1764bc; --warnbg:#fff6e2; --warnline:#d89a27;
+  --code:#0f2338; --codeink:#e8f1fb; --green:#0e7a52; --red:#a83232; --amber:#96601a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.85 system-ui,"Microsoft YaHei","PingFang SC",sans-serif}
+main{max-width:1180px;margin:auto;padding:36px 24px 80px}
+header.hero{padding:34px 34px 30px;background:linear-gradient(135deg,#0e2b52,#164a86);color:#fff;border-radius:16px}
+header.hero small{display:block;letter-spacing:.14em;text-transform:uppercase;opacity:.8;font-size:12px;margin-bottom:12px}
+header.hero h1{margin:0 0 10px;font-size:30px;line-height:1.35}
+header.hero p{margin:0;opacity:.92;font-size:15px}
+header.hero .chips{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+header.hero .chips span{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);padding:5px 12px;border-radius:999px;font-size:13px}
+nav.toc{position:sticky;top:0;z-index:20;background:rgba(242,246,251,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin:0 -24px 24px;padding:12px 24px;display:flex;gap:8px;flex-wrap:wrap}
+nav.toc a{font-size:13px;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;white-space:nowrap}
+nav.toc a:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media (max-width:1000px){
+  nav.toc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  nav.toc a{flex:0 0 auto}
+}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 28px 26px;margin-top:22px}
+section>h2{margin:22px 0 4px;font-size:22px;color:var(--navy);scroll-margin-top:70px}
+section>h2 .no{color:var(--accent);font-weight:700;margin-right:8px}
+h3{font-size:17px;color:#143d73;margin:26px 0 8px;scroll-margin-top:70px}
+h4{font-size:15px;color:#22456f;margin:20px 0 6px}
+p{margin:10px 0}
+a{color:var(--accent)}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:5px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:14px 0;background:#fff}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+th{background:#eaf1fb;color:#143d73;font-weight:600;white-space:nowrap}
+td code,p code,li code,th code{background:#eef4fb;border:1px solid #dbe6f4;border-radius:4px;padding:1px 5px;font:13px/1.5 Consolas,"Courier New",monospace;color:#0f3e73}
+pre{position:relative;background:var(--code);color:var(--codeink);padding:16px 18px;border-radius:10px;overflow:auto;font:13px/1.7 Consolas,"Courier New",monospace;margin:12px 0}
+pre code{background:none;border:none;padding:0;color:inherit;font:inherit}
+.copy{position:absolute;top:8px;right:8px;font-size:12px;padding:3px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;cursor:pointer}
+.copy:hover{background:rgba(255,255,255,.24)}
+.scroll{overflow-x:auto;margin:14px 0}
+.scroll table{margin:0;min-width:560px}
+.note,.warn,.tip{border-radius:10px;padding:12px 16px;margin:14px 0;font-size:15px}
+.note{background:#eef5ff;border-left:4px solid var(--accent)}
+.warn{background:var(--warnbg);border-left:4px solid var(--warnline)}
+.tip{background:#eefaf3;border-left:4px solid var(--green)}
+.note b,.warn b,.tip b{color:var(--navy)}
+.mono{font-family:Consolas,"Courier New",monospace}
+.tag{display:inline-block;font:600 12px/1.6 Consolas,monospace;padding:1px 8px;border-radius:5px;color:#fff;letter-spacing:.04em}
+.get{background:var(--green)}
+.post{background:#7b4bd1}
+.api-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:26px 0 2px;padding-top:18px;border-top:2px dashed var(--line)}
+.api-head h3{margin:0;font-size:17px;color:var(--navy)}
+.api-head .path{font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid var(--line);border-radius:6px;padding:2px 9px}
+.meta{font-size:13px;color:var(--muted);margin:6px 0 0}
+.meta code{font-size:12px}
+/* ---------- 折叠块（示例默认收起） ---------- */
+details.fold{border:1px solid var(--line);border-radius:10px;margin:14px 0;background:#fafcff;overflow:hidden}
+details.fold>summary{cursor:pointer;padding:9px 14px;font-size:14px;font-weight:600;color:#143d73;list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:"▸";color:var(--accent);display:inline-block;transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(90deg)}
+details.fold>summary:hover{background:#eef4fb}
+details.fold[open]>summary{border-bottom:1px solid var(--line);background:#f4f8fe}
+details.fold .fold-body{padding:12px 14px}
+details.fold .fold-body pre{margin:0}
+.fold-tools{display:flex;gap:8px;margin:16px 0 2px;flex-wrap:wrap}
+.fold-tools button{font-size:13px;padding:4px 13px;border:1px solid var(--line);background:#fff;border-radius:999px;cursor:pointer;color:var(--accent)}
+.fold-tools button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+footer{margin-top:30px;padding:22px 26px;background:#0e2b52;color:#cfe0f5;border-radius:14px;font-size:14px}
+footer a{color:#9fc8f5}
+.top{display:inline-block;margin-top:14px;font-size:13px;color:var(--muted);text-decoration:none}
+@media print{
+  body{background:#fff}
+  nav.toc,.copy,.top,.fold-tools{display:none}
+  section{border:none;padding:0;margin-top:26px}
+  pre{white-space:pre-wrap;background:#f4f7fb;color:#0f2338;border:1px solid #ccc}
+  table{font-size:12px}
+  section>h2{page-break-after:avoid}
+  details.fold{border:1px solid #ccc;break-inside:avoid}
+  details.fold>summary{background:#f4f7fb}
+}
+
+/* ---------- 左侧大纲 ---------- */
+html{scroll-behavior:smooth}
+.shell{display:flex;align-items:flex-start}
+.shell>main{flex:1 1 auto;min-width:0;margin:0 auto;padding:28px 24px 80px}
+aside.outline{position:sticky;top:0;height:100vh;flex:0 0 302px;background:#fff;
+  border-right:1px solid var(--line);display:flex;flex-direction:column;padding-top:18px}
+.outline-head{padding:0 14px 10px;border-bottom:1px solid var(--line)}
+.outline-title{margin:0 0 8px;font-size:12px;letter-spacing:.14em;color:var(--muted)}
+#outlineFilter{width:100%;padding:6px 10px;border:1px solid var(--line);border-radius:8px;
+  font-size:13px;outline:none;background:#f8fbff;color:var(--ink)}
+#outlineFilter:focus{border-color:var(--accent);background:#fff}
+.outline-count{margin:7px 0 0;font-size:11px;color:var(--muted)}
+.outline-nav{overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;padding:8px 8px 48px}
+.outline ul{list-style:none;margin:0;padding:0}
+.outline li{margin:0}
+.outline a{display:block;padding:4px 10px;border-radius:6px;color:#2c3f57;text-decoration:none;
+  font-size:13px;line-height:1.55;border-left:2px solid transparent}
+.outline .ol2>li>a{font-weight:600;color:var(--navy);margin-top:4px}
+.outline .ol2>li>a:hover{background:#eef4fb}
+.outline .ol3 a{padding-left:18px;font-size:12.5px;color:#4a5f7a}
+.outline a:hover{color:var(--accent)}
+.outline a.active{background:#e3eefb;color:var(--accent);border-left-color:var(--accent);font-weight:600}
+.outline .m{display:inline-block;font:600 10px/1.7 Consolas,monospace;padding:0 5px;border-radius:4px;
+  color:#fff;margin-right:5px;vertical-align:1px}
+.outline .m.get{background:var(--green)}
+.outline .m.post{background:#7b4bd1}
+.outline .hidden{display:none}
+.outline-empty{padding:14px 16px;font-size:12px;color:var(--muted);display:none}
+@media (min-width:801px){nav.toc{display:none}}
+@media (min-width:801px) and (max-width:1100px){
+  aside.outline{flex:0 0 252px}
+  .shell>main{padding:24px 18px 70px}
+}
+@media (max-width:800px){
+  .shell{display:block}
+  aside.outline{display:none}
+  .shell>main{margin:auto}
+}
+@media print{
+  aside.outline{display:none}
+  .shell{display:block}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="outline">
+  <div class="outline-head">
+    <p class="outline-title">文档大纲</p>
+    <input id="outlineFilter" type="search" placeholder="筛选章节或接口名…" autocomplete="off">
+    <p class="outline-count">15 章 · 73 节</p>
+  </div>
+  <nav class="outline-nav">
+    <ul class="ol2">
+      <li data-lvl="2" data-text="1 能力范围与接入流程"><a href="#scope" data-target="scope">1 能力范围与接入流程</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="1.1 四类能力"><a href="#h3-1" data-target="h3-1">1.1 四类能力</a></li>
+      <li data-lvl="3" data-text="1.2 唯一调用流程"><a href="#h3-2" data-target="h3-2">1.2 唯一调用流程</a></li>
+      <li data-lvl="3" data-text="1.3 接入四步"><a href="#h3-3" data-target="h3-3">1.3 接入四步</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="2 接入前准备"><a href="#prepare" data-target="prepare">2 接入前准备</a>
+      </li>
+      <li data-lvl="2" data-text="3 应用配置"><a href="#app" data-target="app">3 应用配置</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="3.1 两种代理模式的区别"><a href="#h3-4" data-target="h3-4">3.1 两种代理模式的区别</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="4 令牌签发与 hmac 签名"><a href="#token" data-target="token">4 令牌签发与 HMAC 签名</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="4.1 接口地址"><a href="#h3-5" data-target="h3-5">4.1 接口地址</a></li>
+      <li data-lvl="3" data-text="4.2 请求体参数"><a href="#h3-6" data-target="h3-6">4.2 请求体参数</a></li>
+      <li data-lvl="3" data-text="4.3 请求头"><a href="#h3-7" data-target="h3-7">4.3 请求头</a></li>
+      <li data-lvl="3" data-text="4.4 签名原文（canonical）"><a href="#h3-8" data-target="h3-8">4.4 签名原文（canonical）</a></li>
+      <li data-lvl="3" data-text="4.5 计算步骤"><a href="#h3-9" data-target="h3-9">4.5 计算步骤</a></li>
+      <li data-lvl="3" data-text="4.6 响应"><a href="#h3-10" data-target="h3-10">4.6 响应</a></li>
+      <li data-lvl="3" data-text="4.7 签名易错点对照"><a href="#h3-11" data-target="h3-11">4.7 签名易错点对照</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="5 apifox 环境与脚本配置"><a href="#apifox" data-target="apifox">5 Apifox 环境与脚本配置</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="5.1 导入规范文件"><a href="#h3-12" data-target="h3-12">5.1 导入规范文件</a></li>
+      <li data-lvl="3" data-text="5.2 环境变量"><a href="#h3-13" data-target="h3-13">5.2 环境变量</a></li>
+      <li data-lvl="3" data-text="5.3 认证与脚本的配置位置"><a href="#h3-14" data-target="h3-14">5.3 认证与脚本的配置位置</a></li>
+      <li data-lvl="3" data-text="5.4 签发前置脚本"><a href="#h3-15" data-target="h3-15">5.4 签发前置脚本</a></li>
+      <li data-lvl="3" data-text="5.5 保存令牌后置脚本"><a href="#h3-16" data-target="h3-16">5.5 保存令牌后置脚本</a></li>
+      <li data-lvl="3" data-text="5.6 业务接口可选前置检查"><a href="#h3-17" data-target="h3-17">5.6 业务接口可选前置检查</a></li>
+      <li data-lvl="3" data-text="5.7 第一轮联调顺序"><a href="#h3-18" data-target="h3-18">5.7 第一轮联调顺序</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="6 bearer 业务调用"><a href="#bearer" data-target="bearer">6 Bearer 业务调用</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="6.1 鉴权组件与令牌的传递机制"><a href="#h3-19" data-target="h3-19">6.1 鉴权组件与令牌的传递机制</a></li>
+      <li data-lvl="3" data-text="6.2 请求头"><a href="#h3-20" data-target="h3-20">6.2 请求头</a></li>
+      <li data-lvl="3" data-text="6.3 调用示例"><a href="#h3-21" data-target="h3-21">6.3 调用示例</a></li>
+      <li data-lvl="3" data-text="6.4 令牌缓存与更新"><a href="#h3-22" data-target="h3-22">6.4 令牌缓存与更新</a></li>
+      <li data-lvl="3" data-text="6.5 权限校验不是一次性开关"><a href="#h3-23" data-target="h3-23">6.5 权限校验不是一次性开关</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="7 通用约定"><a href="#common" data-target="common">7 通用约定</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="7.1 统一响应信封"><a href="#h3-24" data-target="h3-24">7.1 统一响应信封</a></li>
+      <li data-lvl="3" data-text="7.2 四条通用约定"><a href="#h3-25" data-target="h3-25">7.2 四条通用约定</a></li>
+      <li data-lvl="3" data-text="7.3 request-id 的三种语义"><a href="#h3-26" data-target="h3-26">7.3 Request-Id 的三种语义</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="8 接口清单"><a href="#catalog" data-target="catalog">8 接口清单</a>
+      </li>
+      <li data-lvl="2" data-text="9 接口详解"><a href="#api" data-target="api">9 接口详解</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="9.1 获取 accesstoken"><a href="#issueAccessToken" data-target="issueAccessToken"><span class="m post">POST</span>9.1 获取 AccessToken</a></li>
+      <li data-lvl="3" data-text="9.2 查询可用智能体"><a href="#listAgents" data-target="listAgents"><span class="m get">GET</span>9.2 查询可用智能体</a></li>
+      <li data-lvl="3" data-text="9.3 查询可用技能"><a href="#listSkills" data-target="listSkills"><span class="m get">GET</span>9.3 查询可用技能</a></li>
+      <li data-lvl="3" data-text="9.4 查询可用工具"><a href="#listTools" data-target="listTools"><span class="m get">GET</span>9.4 查询可用工具</a></li>
+      <li data-lvl="3" data-text="9.5 查询租户可选模型"><a href="#listModels" data-target="listModels"><span class="m get">GET</span>9.5 查询租户可选模型</a></li>
+      <li data-lvl="3" data-text="9.6 创建会话"><a href="#createSession" data-target="createSession"><span class="m post">POST</span>9.6 创建会话</a></li>
+      <li data-lvl="3" data-text="9.7 发起异步对话"><a href="#runChat" data-target="runChat"><span class="m post">POST</span>9.7 发起异步对话</a></li>
+      <li data-lvl="3" data-text="9.8 轮询对话执行结果"><a href="#getChatTask" data-target="getChatTask"><span class="m get">GET</span>9.8 轮询对话执行结果</a></li>
+      <li data-lvl="3" data-text="9.9 订阅 sse 实时事件"><a href="#subscribeSessionEvents" data-target="subscribeSessionEvents"><span class="m get">GET</span>9.9 订阅 SSE 实时事件</a></li>
+      <li data-lvl="3" data-text="9.10 停止会话执行"><a href="#stopSession" data-target="stopSession"><span class="m post">POST</span>9.10 停止会话执行</a></li>
+      <li data-lvl="3" data-text="9.11 上传会话附件"><a href="#uploadSessionAttachment" data-target="uploadSessionAttachment"><span class="m post">POST</span>9.11 上传会话附件</a></li>
+      <li data-lvl="3" data-text="9.12 下载会话产物"><a href="#downloadArtifact" data-target="downloadArtifact"><span class="m get">GET</span>9.12 下载会话产物</a></li>
+      <li data-lvl="3" data-text="9.13 查询本人定时任务"><a href="#listScheduledTasks" data-target="listScheduledTasks"><span class="m get">GET</span>9.13 查询本人定时任务</a></li>
+      <li data-lvl="3" data-text="9.14 触发定时任务执行"><a href="#triggerScheduledTask" data-target="triggerScheduledTask"><span class="m post">POST</span>9.14 触发定时任务执行</a></li>
+      <li data-lvl="3" data-text="9.15 查询单次任务执行结果"><a href="#getScheduledTaskRun" data-target="getScheduledTaskRun"><span class="m get">GET</span>9.15 查询单次任务执行结果</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="10 业务链路"><a href="#flow" data-target="flow">10 业务链路</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="10.1 先取资源，再发对话"><a href="#h3-27" data-target="h3-27">10.1 先取资源，再发对话</a></li>
+      <li data-lvl="3" data-text="10.2 对话主链路"><a href="#h3-28" data-target="h3-28">10.2 对话主链路</a></li>
+      <li data-lvl="3" data-text="10.3 sse 是前置条件，轮询是终态兜底"><a href="#h3-29" data-target="h3-29">10.3 SSE 是前置条件，轮询是终态兜底</a></li>
+      <li data-lvl="3" data-text="10.4 定时任务链路"><a href="#h3-30" data-target="h3-30">10.4 定时任务链路</a></li>
+      <li data-lvl="3" data-text="10.5 幂等与重试"><a href="#h3-31" data-target="h3-31">10.5 幂等与重试</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="11 sse 事件规范"><a href="#sse" data-target="sse">11 SSE 事件规范</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="11.1 建连时序（最容易踩错的一点）"><a href="#h3-32" data-target="h3-32">11.1 建连时序（最容易踩错的一点）</a></li>
+      <li data-lvl="3" data-text="11.2 报文格式"><a href="#h3-33" data-target="h3-33">11.2 报文格式</a></li>
+      <li data-lvl="3" data-text="11.3 事件类型"><a href="#h3-34" data-target="h3-34">11.3 事件类型</a></li>
+      <li data-lvl="3" data-text="11.4 典型事件顺序"><a href="#h3-35" data-target="h3-35">11.4 典型事件顺序</a></li>
+      <li data-lvl="3" data-text="11.5 客户端处理要求"><a href="#h3-36" data-target="h3-36">11.5 客户端处理要求</a></li>
+      <li data-lvl="3" data-text="11.6 在 apifox 里验证 sse"><a href="#h3-37" data-target="h3-37">11.6 在 Apifox 里验证 SSE</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="12 错误码手册"><a href="#errors" data-target="errors">12 错误码手册</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="12.1 认证与网关类（签发与 bearer 通用）"><a href="#h3-38" data-target="h3-38">12.1 认证与网关类（签发与 Bearer 通用）</a></li>
+      <li data-lvl="3" data-text="12.2 通用参数类"><a href="#h3-39" data-target="h3-39">12.2 通用参数类</a></li>
+      <li data-lvl="3" data-text="12.3 对话类"><a href="#h3-40" data-target="h3-40">12.3 对话类</a></li>
+      <li data-lvl="3" data-text="12.4 定时任务类"><a href="#h3-41" data-target="h3-41">12.4 定时任务类</a></li>
+      <li data-lvl="3" data-text="12.5 定位原则"><a href="#h3-42" data-target="h3-42">12.5 定位原则</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="13 限制与限流"><a href="#limits" data-target="limits">13 限制与限流</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="13.1 参数长度与大小限制"><a href="#h3-43" data-target="h3-43">13.1 参数长度与大小限制</a></li>
+      <li data-lvl="3" data-text="13.2 限流与配额"><a href="#h3-44" data-target="h3-44">13.2 限流与配额</a></li>
+      <li data-lvl="3" data-text="13.3 令牌时效"><a href="#h3-45" data-target="h3-45">13.3 令牌时效</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="14 排障"><a href="#trouble" data-target="trouble">14 排障</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="14.1 签发返回 401"><a href="#h3-46" data-target="h3-46">14.1 签发返回 401</a></li>
+      <li data-lvl="3" data-text="14.2 业务返回 401 或 bearer 被拒"><a href="#h3-47" data-target="h3-47">14.2 业务返回 401 或 Bearer 被拒</a></li>
+      <li data-lvl="3" data-text="14.3 变量没有被替换"><a href="#h3-48" data-target="h3-48">14.3 变量没有被替换</a></li>
+      <li data-lvl="3" data-text="14.4 签发返回 403 与 5001233075"><a href="#h3-49" data-target="h3-49">14.4 签发返回 403 与 5001233075</a></li>
+      <li data-lvl="3" data-text="14.5 发起对话返回 5001093001"><a href="#h3-50" data-target="h3-50">14.5 发起对话返回 5001093001</a></li>
+      <li data-lvl="3" data-text="14.6 轮询一直停在 running"><a href="#h3-51" data-target="h3-51">14.6 轮询一直停在 running</a></li>
+      <li data-lvl="3" data-text="14.7 sse 收不到事件"><a href="#h3-52" data-target="h3-52">14.7 SSE 收不到事件</a></li>
+      <li data-lvl="3" data-text="14.8 用调用日志定位"><a href="#h3-53" data-target="h3-53">14.8 用调用日志定位</a></li>
+      </ul>
+      </li>
+      <li data-lvl="2" data-text="15 附录与变更"><a href="#appendix" data-target="appendix">15 附录与变更</a>
+      <ul class="ol3">
+      <li data-lvl="3" data-text="15.1 随附文件"><a href="#h3-54" data-target="h3-54">15.1 随附文件</a></li>
+      <li data-lvl="3" data-text="15.2 v3 相对 v2 的变化"><a href="#h3-55" data-target="h3-55">15.2 v3 相对 v2 的变化</a></li>
+      <li data-lvl="3" data-text="15.3 官方文档未明确、本规范未作假设的部分"><a href="#h3-56" data-target="h3-56">15.3 官方文档未明确、本规范未作假设的部分</a></li>
+      <li data-lvl="3" data-text="15.4 参考"><a href="#h3-57" data-target="h3-57">15.4 参考</a></li>
+      <li data-lvl="3" data-text="15.5 版本记录"><a href="#h3-58" data-target="h3-58">15.5 版本记录</a></li>
+      </ul>
+      </li>
+    </ul>
+  </nav>
+</aside>
+<main>
+
+<header class="hero">
+  <small>LINGEE OPENAPI · 接入手册 v3.1 · 2026-11-20</small>
+  <h1>灵基 OpenAPI 详细接入手册</h1>
+  <p>本地 HMAC 签名 → 换取 AccessToken → 以 Bearer 调用 15 个开放接口。本版依据官方《灵基 OpenAPI 接入指南》补齐全部业务接口的入参、出参与错误码，并按实测修订了对话链路的前置条件。</p>
+  <div class="chips">
+    <span>15 个接口：1 签发 + 14 业务</span>
+    <span>令牌有效期 7200 秒</span>
+    <span>签名偏差窗口 ±300 秒</span>
+    <span>发起对话前必须先建 SSE 连接</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#scope">1 能力与流程</a>
+  <a href="#prepare">2 接入前准备</a>
+  <a href="#app">3 应用配置</a>
+  <a href="#token">4 令牌签发与签名</a>
+  <a href="#apifox">5 Apifox 配置</a>
+  <a href="#bearer">6 Bearer 调用</a>
+  <a href="#common">7 通用约定</a>
+  <a href="#catalog">8 接口清单</a>
+  <a href="#api">9 接口详解</a>
+  <a href="#flow">10 业务链路</a>
+  <a href="#sse">11 SSE 事件规范</a>
+  <a href="#errors">12 错误码手册</a>
+  <a href="#limits">13 限制与限流</a>
+  <a href="#trouble">14 排障</a>
+  <a href="#appendix">15 附录与变更</a>
+</nav>
+
+<section id="scope">
+  <h2><span class="no">1</span>能力范围与接入流程</h2>
+
+  <p>灵基平台通过 OpenAPI 向第三方系统开放智能对话、资源查询和定时任务执行能力，支持把平台能力集成进业务系统。开放能力受三重约束：应用接口授权、执行用户权限、资源归属。</p>
+
+  <h3 id="h3-1">1.1 四类能力</h3>
+  <div class="scroll"><table>
+    <tr><th>能力域</th><th>包含接口</th><th>典型用途</th></tr>
+    <tr><td>智能对话与会话管理</td><td>创建会话、发起异步对话、轮询结果、订阅 SSE、停止执行</td><td>把智能体嵌入业务单据、审批流、工作台</td></tr>
+    <tr><td>文件交互</td><td>上传会话附件、下载会话产物</td><td>投递报表做分析、取回生成的 Excel / 文档</td></tr>
+    <tr><td>资源查询</td><td>智能体、技能、工具、模型列表</td><td>调用前拿到真实 id / name，避免猜参数</td></tr>
+    <tr><td>定时任务执行</td><td>任务列表、触发任务、查询单次执行结果</td><td>业务系统按自身节奏驱动已有的定时任务</td></tr>
+  </table></div>
+
+  <h3 id="h3-2">1.2 唯一调用流程</h3>
+  <p>HMAC 是<strong>客户端本地完成的签名算法</strong>，不是独立 HTTP 接口，平台不存在「先请求一个 HMAC 接口」这一步。整条链路的第一个 HTTP 请求，就是携带 HMAC 签名的令牌签发请求；服务端验签通过后返回 AccessToken，之后全部业务接口用 Bearer 令牌调用。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>① 本地计算签名           ② POST /console/openapi/v1/access-tokens        ③ 携带 Bearer 调用业务
+   App ID + App Secret  →  验签通过，返回 access_token（7200s）        →  /work/openapi/v1/*
+   （Secret 不出本机）        （明文仅此一次返回）                        （14 个业务接口）</code></pre>
+
+  <h3 id="h3-3">1.3 接入四步</h3>
+  <ol>
+    <li>在控制台「开放平台 → OpenAPI」创建并启用应用，配置代理用户、接口授权，打开「允许签发 AccessToken」。</li>
+    <li>妥善保存 App ID 与 App Secret（Secret 仅创建或重置时展示一次），通过签发接口换取令牌。</li>
+    <li>使用 AccessToken 与租户路由头 <code>X-Tenant-Id</code> 调用已授权接口，按第 9 章对照填写入参、解析出参。</li>
+    <li>令牌到期前重新换取；调用异常时通过控制台「调用日志」按 Trace ID / Request ID 定位。</li>
+  </ol>
+
+  <div class="warn">
+    <b>两种凭证不能混用。</b>签发阶段使用 <code>X-Lingee-OpenApi-*</code> 签名头，不携带 <code>Authorization</code>；业务阶段只使用 <code>Authorization: Bearer</code> 与 <code>X-Tenant-Id</code>，不得再携带任何 <code>X-Lingee-OpenApi-*</code> 头或用户身份头。混用会被拒绝，返回 401 与 <code>5001233082</code>。
+  </div>
+</section>
+
+<section id="prepare">
+  <h2><span class="no">2</span>接入前准备</h2>
+  <div class="scroll"><table>
+    <tr><th>准备项</th><th>说明</th></tr>
+    <tr><td>目标环境 HTTPS 地址</td><td>业务接口地址的前缀，例如 <code>https://your-host</code>。调用时在其后拼接相对路径，注意区分两个前缀：签发用 <code>/console</code>，业务用 <code>/work</code>。</td></tr>
+    <tr><td>租户标识 <code>tenant_id</code></td><td>应用所属租户，形如 <code>2559609318685252608_production</code>。签发请求体与 <code>X-Tenant-Id</code> 头都要用，且两者必须一致。</td></tr>
+    <tr><td>控制台账号</td><td>需要「开放平台」应用管理权限，用于创建应用、查看调用日志。</td></tr>
+    <tr><td>App ID / App Secret</td><td>App Secret 仅在创建或重置时展示一次，应由调用方服务端安全保存，不进入前端、不写日志、不入代码仓库。</td></tr>
+    <tr><td>时钟同步</td><td>签名时间戳默认只允许与服务端偏差 ±300 秒（反重放降级时收紧为 ±60 秒）。机器时间不准会直接导致 401 与 <code>5001233063</code>。</td></tr>
+    <tr><td>出口 IP</td><td>如平台配置了 IP / CIDR 白名单，需把调用方出口 IP 或网段报备。该白名单约束 HMAC 签名请求（含签发）。</td></tr>
+  </table></div>
+  <div class="note">
+    本文只覆盖 AccessToken 鉴权链路。获取令牌时所需的应用签名属于该链路的必要步骤；业务接口部分只演示 Bearer 调用。
+  </div>
+</section>
+
+<section id="app">
+  <h2><span class="no">3</span>应用配置</h2>
+  <p>进入控制台「开放平台 → OpenAPI」，点击「创建应用」，填写应用名称（联系人、用途按需），然后完成以下配置。</p>
+
+  <div class="scroll"><table>
+    <tr><th>配置项</th><th>操作要求</th></tr>
+    <tr><td>代理用户</td><td>选择<strong>固定用户</strong>并指定一个用户，或选择<strong>白名单用户</strong>并配置允许代理的用户。执行用户由该配置决定，令牌绑定到执行用户。</td></tr>
+    <tr><td>允许签发 AccessToken</td><td>打开开关；同时平台侧也须已开启 AccessToken 能力。</td></tr>
+    <tr><td>接口授权</td><td>选择接入所需接口，「全部接口」表示授权当前及后续新增接口。授权缺失会在业务调用时返回 403 与 <code>5001233071</code>。</td></tr>
+    <tr><td>IP / CIDR 白名单</td><td>约束 HMAC 签名请求的来源 IP（包括 AccessToken 签发及 HMAC 直连）。按需填写出口 IP 或网段，留空表示不限制。Bearer 业务请求当前不逐请求匹配该白名单，但白名单变更会使既有 Token 失效。</td></tr>
+    <tr><td>应用状态</td><td>创建后确认应用为启用状态。停用应用会使既有令牌全部失效。</td></tr>
+  </table></div>
+
+  <h3 id="h3-4">3.1 两种代理模式的区别</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>模式</th><th>执行用户来源</th><th>签发请求体</th><th>适用场景</th></tr>
+      <tr>
+        <td>固定用户<br><span class="mono">FIXED_PROXY</span></td>
+        <td>应用配置里指定的那一个用户</td>
+        <td>仅 <code>tenant_id</code>，<strong>不得</strong>传 <code>subject_type</code> / <code>subject</code></td>
+        <td>系统级集成：所有调用都以同一个服务账号身份执行</td>
+      </tr>
+      <tr>
+        <td>白名单用户<br><span class="mono">HEADER_USER</span></td>
+        <td>由请求参数指定，并校验代理白名单</td>
+        <td><code>tenant_id</code> + <code>subject_type</code> + <code>subject</code>（erp_user 另加 <code>data_center_id</code>）</td>
+        <td>多人使用：以真实业务用户身份执行，权限随人走</td>
+      </tr>
+    </table>
+  </div>
+  <div class="warn">
+    <b>「不代理」模式不支持签发 AccessToken</b>，因为没有可绑定的执行用户。<b>白名单用户模式要求白名单非空</b>，也可配置为全部用户。App Secret 仅用于获取令牌，不随 Bearer 业务请求发送；重置 Secret 后旧值立即不可用，需同步替换调用服务中的配置。
+  </div>
+</section>
+
+<section id="token">
+  <h2><span class="no">4</span>令牌签发与 HMAC 签名</h2>
+
+  <h3 id="h3-5">4.1 接口地址</h3>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>POST https://&lt;HOST&gt;/console/openapi/v1/access-tokens</code></pre>
+  <p>请求体为 JSON，<code>Content-Type: application/json</code>。签发接口无需额外配置接口码授权。</p>
+
+  <h3 id="h3-6">4.2 请求体参数</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>参数</th><th>必填</th><th>说明</th></tr>
+      <tr><td><code>tenant_id</code></td><td>是</td><td>应用绑定的租户标识，必须与应用配置一致。</td></tr>
+      <tr><td><code>subject_type</code></td><td>白名单用户模式必填</td><td>取值为 <code>mobile</code>、<code>email</code> 或 <code>erp_user</code>。<strong>固定用户模式不得传入。</strong></td></tr>
+      <tr><td><code>subject</code></td><td>白名单用户模式必填</td><td>手机号、邮箱或 ERP 用户标识，长度 1–256 字符。<strong>固定用户模式不得传入。</strong></td></tr>
+      <tr><td><code>data_center_id</code></td><td>subject_type 为 erp_user 时必填</td><td>ERP 数据中心 ID。</td></tr>
+    </table>
+  </div>
+
+  <h4>固定用户模式（请求体只含 tenant_id）</h4>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>{"tenant_id":"&lt;TENANT_ID&gt;"}</code></pre>
+  <h4>白名单用户模式（以手机号为例）</h4>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>{"tenant_id":"&lt;TENANT_ID&gt;","subject_type":"mobile","subject":"13800138000"}
+
+// 邮箱：  {"tenant_id":"&lt;TENANT_ID&gt;","subject_type":"email","subject":"a@b.com"}
+// ERP ：  {"tenant_id":"&lt;TENANT_ID&gt;","subject_type":"erp_user","subject":"&lt;ERP_USER&gt;","data_center_id":"&lt;DC_ID&gt;"}</code></pre>
+  <div class="note">
+    旧版界面的示例曾提示「subject_type 仅支持 mobile / email」，<strong>该提示已过时</strong>。当前支持 <code>mobile</code>、<code>email</code>、<code>erp_user</code>，其中 <code>erp_user</code> 还必须提供 <code>data_center_id</code>。
+  </div>
+
+  <h3 id="h3-7">4.3 请求头</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>请求头</th><th>填写要求</th></tr>
+      <tr><td><code>X-Lingee-OpenApi-App-Id</code></td><td>应用 App ID。</td></tr>
+      <tr><td><code>X-Lingee-OpenApi-Timestamp</code></td><td>Unix <strong>毫秒</strong>时间戳，默认允许与服务端偏差 ±300 秒。</td></tr>
+      <tr><td><code>X-Lingee-OpenApi-Nonce</code></td><td>每次请求生成新的随机值，建议长度 16–128 字符。重复使用返回 401 与 <code>5001233064</code>。</td></tr>
+      <tr><td><code>X-Lingee-OpenApi-Signature</code></td><td>HMAC-SHA256 签名，<strong>小写十六进制</strong>字符串。</td></tr>
+      <tr><td><code>Request-Id</code></td><td>必填<strong>并参与签名</strong>；1–128 个可打印 ASCII 字符，首尾不得有空白。建议 32 位随机十六进制。</td></tr>
+      <tr><td><code>X-Tenant-Id</code></td><td>应用所属租户标识，用于网关路由，<strong>不参与签名</strong>。</td></tr>
+      <tr><td><code>Content-Type</code></td><td><code>application/json</code>。</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-8">4.4 签名原文（canonical）</h3>
+  <p>签名原文由以下 <strong>10 行</strong>内容以换行符 <code>\n</code> 连接，<strong>末尾不追加换行</strong>。第 4 行为空（无查询参数），第 9 行为空（不传入内部用户 ID）。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>v1                                                  ← 固定版本号
+POST                                                ← HTTP 方法，大写
+/console/openapi/v1/access-tokens                   ← 完整路径，含 /console 前缀
+                                                    ← 空行：Query String 为空
+&lt;APP_ID&gt;                                            ← 应用 ID
+&lt;TIMESTAMP_MILLIS&gt;                                  ← 毫秒时间戳
+&lt;NONCE&gt;                                             ← 随机串
+&lt;REQUEST_ID&gt;                                        ← 与 Request-Id 头一致
+                                                    ← 空行：User-Id 为空
+&lt;BODY_SHA256&gt;                                       ← 请求体 UTF-8 字节的 SHA-256 小写 hex</code></pre>
+
+  <h3 id="h3-9">4.5 计算步骤</h3>
+  <ol>
+    <li>把请求体序列化成最终要发送的那串字节，求 <code>SHA-256</code>，取<strong>小写 hex</strong>，即 <code>BODY_SHA256</code>。</li>
+    <li>按上一节拼出 10 行 canonical（9 个换行，末行后不加换行）。</li>
+    <li><code>signature = hex(HMAC-SHA256(appSecret, canonical))</code>，输出<strong>小写</strong>。</li>
+    <li>把 7 个请求头写入并发送。</li>
+  </ol>
+  <div class="warn">
+    <b>签完之后不能再动请求。</b>签名一旦算好，不得再修改 URL、Query、请求体或签名相关请求头；任何变动都会让 body 哈希不匹配，返回 401 与 <code>5001233062</code>。如果你在 Apifox 里用了动态占位符（<code>{{$timestamp}}</code>、<code>{{$randomInt}}</code> 之类）填写 Body，一定要在签名前完成变量替换并冻结字节，否则签名与实发内容必然不一致。
+  </div>
+
+  <h3 id="h3-10">4.6 响应</h3>
+  <p>签发成功后，从响应 <code>data</code> 中读取并保存 <code>access_token</code>。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>{
+  "code": "0",
+  "data": {
+    "access_token": "lta_...",
+    "token_type": "Bearer",
+    "expires_in": 7200,
+    "expires_at": "2026-09-08T12:30:00Z"
+  }
+}</code></pre>
+  <p><code>access_token</code> 明文仅在签发响应中返回，之后无法再次读取。<code>token_type</code> 固定为 <code>Bearer</code>；<code>expires_in</code> 为剩余有效秒数；<code>expires_at</code> 为 UTC 绝对过期时间。上例时间仅作格式展示，有效期以实际响应为准。</p>
+
+  <h3 id="h3-11">4.7 签名易错点对照</h3>
+  <div class="scroll"><table>
+    <tr><th>易错点</th><th>正确做法</th></tr>
+    <tr><td>签名路径写成 <code>/openapi/v1/access-tokens</code></td><td>必须与请求 URL 路径完全一致，含 <code>/console</code> 前缀</td></tr>
+    <tr><td>canonical 行数按 9 行拼，或末尾多一个换行</td><td>10 行、9 个换行，末行后无换行；两处空行不可省</td></tr>
+    <tr><td>时间戳用秒</td><td>必须毫秒</td></tr>
+    <tr><td>签名大写 hex</td><td>小写 hex</td></tr>
+    <tr><td>对 JSON 对象重新序列化后算哈希</td><td>对<strong>实际发送的那串字节</strong>算哈希，算完不得再序列化</td></tr>
+    <tr><td>发送时多带 <code>Authorization</code> 或 <code>X-Lingee-OpenApi-User-Id</code></td><td>签发请求不携带任何用户身份头</td></tr>
+    <tr><td>以为「租户不参与签名」就可以签后改 body</td><td><code>X-Tenant-Id</code> 头不参与 canonical，但 body 里的 <code>tenant_id</code> 参与哈希，签后改 body 必然失败</td></tr>
+  </table></div>
+</section>
+
+<section id="apifox">
+  <h2><span class="no">5</span>Apifox 环境与脚本配置</h2>
+
+  <h3 id="h3-12">5.1 导入规范文件</h3>
+  <p>在 Apifox 新建测试项目，导入随本手册提供的 <code>灵基开放OpenAPI-v3.openapi.json</code>（或内容完全一致的 <code>.yaml</code>）。<strong>只导入其中一个</strong>，两份内容等价，同时导入会产生重复接口。</p>
+  <p>导入后应得到 4 个目录、15 个接口：01 认证 换取 AccessToken、02 业务 资源查询、03 业务 会话、04 业务 定时任务。规范已包含全部业务接口的请求体字段、Query 参数、响应结构与错误码；但<strong>不包含可执行脚本</strong>——OpenAPI 规范本身不携带前后置脚本，签发接口的签名脚本需要按 5.4、5.5 手工粘贴。</p>
+  <p>请求体结构在规范中是<strong>内联</strong>写死的，不通过 <code>$ref</code> 引用组件模型。原因是 Apifox 导入时对 <code>requestBody</code> 里的 <code>$ref</code> 展开不稳定，常见表现就是导入后 Body 页签为空、需要手工一个个补字段。因此导入后 Body 页签应直接列出全部字段；签发与触发任务两个接口还预置了可直接发送的示例（互斥字段只保留一支，避免 403 / 400）。</p>
+
+  <h3 id="h3-13">5.2 环境变量</h3>
+  <p>前置 URL 设置为真实服务源站，例如 <code>https://your-host</code>，<strong>不能带</strong> <code>/work</code> 或 <code>/console</code>。然后在环境里填写下表变量。</p>
+  <div class="scroll">
+    <table>
+      <tr><th>变量名</th><th>填写内容</th></tr>
+      <tr><td><code>lingee_app_id</code></td><td>应用 ID</td></tr>
+      <tr><td><code>lingee_app_secret</code></td><td>应用 Secret，仅填本地私密值；不要写进共享环境或文档</td></tr>
+      <tr><td><code>lingee_tenant_id</code></td><td>应用绑定租户，如 <code>2559609318685252608_production</code></td></tr>
+      <tr><td><code>lingee_proxy_mode</code></td><td><code>FIXED_PROXY</code> 或 <code>HEADER_USER</code>，按应用实际配置</td></tr>
+      <tr><td><code>lingee_access_token</code></td><td>初始留空，由签发接口的后置脚本写入</td></tr>
+      <tr><td><code>lingee_token_issued_at</code></td><td>初始留空，由后置脚本写入签发时刻（毫秒）</td></tr>
+      <tr><td><code>lingee_request_id</code></td><td>由业务前置脚本用 <code>{{$guid}}</code> 生成；也可手工填固定值</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-14">5.3 认证与脚本的配置位置</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>位置</th><th>Auth</th><th>脚本</th></tr>
+      <tr><td>签发接口 <code>POST /console/openapi/v1/access-tokens</code></td><td>No Auth，签名通过显式请求头完成</td><td>签发前置脚本 + 保存令牌后置脚本</td></tr>
+      <tr><td>14 个业务接口</td><td>Bearer Token，值填 <code>{{lingee_access_token}}</code></td><td>可选令牌检查前置脚本，<strong>不计算 HMAC</strong></td></tr>
+      <tr><td>项目全局</td><td>避免继承旧认证</td><td><strong>不安装</strong> HMAC 脚本</td></tr>
+    </table>
+  </div>
+  <p>每个业务接口保留<strong>且仅保留一条</strong> <code>Authorization</code>。若导入后鉴权组件值未自动填充，请手动填写变量引用。<code>No Auth</code> 只表示不使用客户端内置的鉴权生成器，不表示服务端不验签。令牌怎样从签发响应流进 Auth 组件、以及为什么建议在目录级统一配置，见 6.1。</p>
+
+  <h3 id="h3-15">5.4 签发前置脚本</h3>
+  <p>只放在 <code>POST /console/openapi/v1/access-tokens</code> 的前置操作里，位置排在其它所有前置修改之后。脚本会完成变量替换、模式校验、body 哈希与签名。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>// 只放在 POST /console/openapi/v1/access-tokens 的前置操作
+const C = require('crypto-js');
+function env(k) {
+  const v = pm.environment.get(k);
+  if (!v || /[&lt;&gt;]/.test(String(v))) throw new Error('请配置环境变量 ' + k);
+  return String(v);
+}
+const app = env('lingee_app_id'), secret = env('lingee_app_secret');
+const tenant = env('lingee_tenant_id');
+if (pm.request.method.toUpperCase() !== 'POST') throw new Error('脚本仅用于签发 POST');
+const path = '/console/openapi/v1/access-tokens';
+// 前置 URL 必须只有协议、域名及可选端口，不带额外 path。
+// 签发接口 URL 固定为上述 path，Query 保持空。
+if (!pm.request.body || !pm.request.body.raw) throw new Error('Body 请设置 raw JSON');
+const body = pm.variables.replaceIn(pm.request.body.raw);
+if (/\{\{/.test(body)) throw new Error('Body 存在未替换变量');
+const data = JSON.parse(body);
+if (data.tenant_id !== tenant) throw new Error('Body tenant_id 必须与环境租户一致');
+const mode = env('lingee_proxy_mode');
+if (mode === 'FIXED_PROXY') {
+  // 固定用户：只允许 tenant_id
+  if (Object.keys(data).some(k =&gt; k !== 'tenant_id')) throw new Error('固定用户仅传 tenant_id');
+} else if (mode === 'HEADER_USER') {
+  // 白名单用户：mobile / email / erp_user；erp_user 必须带 data_center_id
+  const types = ['mobile', 'email', 'erp_user'];
+  if (!types.includes(data.subject_type) || !data.subject)
+    throw new Error('白名单用户需填写 subject_type 和 subject');
+  if (data.subject_type === 'erp_user' &amp;&amp; !data.data_center_id)
+    throw new Error('subject_type=erp_user 时必须提供 data_center_id');
+  if (data.subject_type !== 'erp_user' &amp;&amp; data.data_center_id)
+    throw new Error('仅 erp_user 模式可传 data_center_id');
+} else throw new Error('代理模式必须为 FIXED_PROXY 或 HEADER_USER');
+pm.request.body.update(body); // 冻结变量替换后的字节，不再二次序列化
+const ts = String(Date.now());
+const nonce = C.lib.WordArray.random(16).toString();
+const rid = C.lib.WordArray.random(16).toString();
+const hash = C.SHA256(C.enc.Utf8.parse(body)).toString();
+const canonical = ['v1','POST',path,'',app,ts,nonce,rid,'',hash].join('\n');
+const sig = C.HmacSHA256(canonical,secret).toString();
+pm.request.headers.remove('Authorization');
+pm.request.headers.remove('X-Lingee-OpenApi-User-Id');
+const headers = {'Content-Type':'application/json','X-Tenant-Id':tenant,
+ 'X-Lingee-OpenApi-App-Id':app,'X-Lingee-OpenApi-Timestamp':ts,
+ 'X-Lingee-OpenApi-Nonce':nonce,'X-Lingee-OpenApi-Signature':sig,'Request-Id':rid};
+Object.entries(headers).forEach(([key,value])=&gt;pm.request.headers.upsert({key,value}));
+// 兼容导入后保留的参数变量；不输出密钥、签名或主体到日志
+Object.entries({timestamp:ts,nonce,signature:sig,request_id:rid})
+ .forEach(([k,v])=&gt;pm.variables.set('lingee_'+k,v));</code></pre>
+  <p class="meta">相对上一版的变化：<code>subject_type</code> 的枚举加入 <code>erp_user</code>，并新增 <code>data_center_id</code> 的两条校验（erp_user 必填、其它模式不可传），与官方文档第 3.2 节一致。</p>
+
+  <h3 id="h3-16">5.5 保存令牌后置脚本</h3>
+  <p>只放在签发接口的后置操作。签发失败时先清理旧令牌，避免后续业务请求误用过期的值。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>// 只放在签发接口的后置操作。失败时清理旧令牌，防止误用
+pm.environment.unset('lingee_access_token');
+pm.environment.unset('lingee_token_issued_at');
+if (pm.response.code &lt; 200 || pm.response.code &gt;= 300) throw new Error('签发 HTTP 失败');
+const result = pm.response.json();
+const token = result &amp;&amp; result.data &amp;&amp; result.data.access_token;
+if (typeof token !== 'string' || !token) throw new Error('未返回 data.access_token');
+pm.environment.set('lingee_access_token', token);
+pm.environment.set('lingee_token_issued_at', String(Date.now()));
+// 可选：把服务端给出的到期时间也存下来，便于核对本地刷新阈值
+if (result.data.expires_at) pm.environment.set('lingee_token_expires_at', result.data.expires_at);</code></pre>
+  <p>只把令牌保存到当前环境，<strong>不打印令牌</strong>。超时或后置脚本未执行时，请手动清理旧令牌再重试。</p>
+
+  <h3 id="h3-17">5.6 业务接口可选前置检查</h3>
+  <p>仅配置到业务目录（02 / 03 / 04）的前置操作，<strong>不要</strong>配置到认证目录。脚本只做本地令牌存在性与保守时效检查，不重复注入认证头。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>// 可选：仅配置到三个业务目录的前置操作，不配置到认证目录
+const token = pm.environment.get('lingee_access_token');
+if (!token) throw new Error('请先调用签发接口获取 AccessToken');
+const issued = Number(pm.environment.get('lingee_token_issued_at'));
+if (issued &amp;&amp; Date.now() - issued &gt;= 115 * 60 * 1000)
+  throw new Error('本地保守策略：令牌已超过 115 分钟，请重新签发（服务端有效期 120 分钟）');
+pm.variables.set('lingee_request_id', pm.variables.replaceIn('{{$guid}}'));
+// Auth 使用 Bearer Token，值为 {{lingee_access_token}}；本脚本不重复注入认证头</code></pre>
+  <p>115 分钟是客户端建议的保守刷新阈值（约为 10% 剩余有效期），不是服务端限制。官方建议按 <code>expires_in</code> / <code>expires_at</code> 管理，在剩余约 10% 有效期时重新换取。</p>
+
+  <h3 id="h3-18">5.7 第一轮联调顺序</h3>
+  <ol>
+    <li>发送签发接口，确认返回 <code>data.access_token</code>，且环境变量 <code>lingee_access_token</code> 被更新。</li>
+    <li>调用 <code>GET /work/openapi/v1/skills</code>（无需请求体）验证 Bearer 鉴权打通。</li>
+    <li>依次调通四个资源查询接口，记录真实的 <code>assistant_id</code>、<code>skill_names</code>、<code>tools</code>、<code>model</code>。</li>
+    <li>按第 10 章链路补齐会话与对话接口的真实字段。</li>
+  </ol>
+  <div class="tip">
+    <b>规范文件不预置测试用例。</b>接口详情页里的请求体结构、字段说明、示例值都来自真实字段定义，Apifox 会按 schema 生成一份默认请求体，你只需按实际环境替换其中的 id、会话标识等值即可发起 POST 请求。
+  </div>
+</section>
+
+<section id="bearer">
+  <h2><span class="no">6</span>Bearer 业务调用</h2>
+
+  <h3 id="h3-19">6.1 鉴权组件与令牌的传递机制</h3>
+  <p>先明确一件事：<strong>令牌不会被「保存进」Auth 组件</strong>。Apifox 的 Auth 组件是一段「生成规则」，只声明用哪种方式鉴权、以及从哪个变量取值；真正存放令牌的是<strong>环境变量</strong>。三者分工如下。</p>
+  <div class="scroll">
+    <table>
+      <tr><th>角色</th><th>配置位置</th><th>职责</th></tr>
+      <tr><td>环境变量 <code>lingee_access_token</code></td><td>环境 → 变量（本地值）</td><td>存令牌明文，是唯一真身</td></tr>
+      <tr><td>Auth 组件</td><td>接口或目录的「Auth」页签</td><td>声明 Bearer 方式，值只写变量引用 <code>{{lingee_access_token}}</code></td></tr>
+      <tr><td>后置脚本</td><td>签发接口的「后置操作」</td><td>把响应里的 <code>access_token</code> 写进环境变量</td></tr>
+    </table>
+  </div>
+  <p>完整流转只有一条链路：</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>签发接口返回 200
+  └─ 后置脚本：pm.environment.set('lingee_access_token', data.access_token)
+        ↓
+   环境变量 lingee_access_token = lta_xxx            ← 令牌真正存放的位置
+        ↓
+业务接口 Auth = Bearer Token，值填 {{lingee_access_token}}   ← 只是引用，不含明文
+        ↓
+   发送时 Apifox 先做变量替换，再由 Auth 组件拼出请求头
+        ↓
+   Authorization: Bearer lta_xxx</code></pre>
+
+  <h4>为什么不要把令牌直接粘进 Auth</h4>
+  <ul>
+    <li>令牌默认 2 小时过期，写死就得每次手工换，十几个接口要改十几遍。</li>
+    <li>切换环境（测试/生产）或切换执行用户后必须重新签发，写死的值无法自动跟随。</li>
+    <li>写死的明文会随接口文档导出、分享、进版本库，等于泄露凭证。</li>
+  </ul>
+
+  <h4>两种配置粒度</h4>
+  <p>逐个接口配 Auth 可行，但更省事的是<strong>在目录上配一次让子接口继承</strong>。建议在「02 业务 资源查询」「03 业务 会话」「04 业务 定时任务」三个目录上分别设置 Bearer Token，值同为 <code>{{lingee_access_token}}</code>；认证目录及其中的签发接口保持 <code>No Auth</code>。这样以后新增业务接口不用再单独配置。</p>
+  <div class="warn">
+    <b>不要在业务前置脚本里再手工写一遍 Authorization。</b>Auth 组件已经会生成这个头，脚本里再 upsert 一次会造成重复头，部分网关直接拒绝。业务侧的前置脚本只做「令牌是否存在、是否临近过期」的检查即可。
+  </div>
+  <p class="meta">签发接口是例外：它不使用 Auth 组件，四个签名头由前置脚本显式写入，所以接口 Auth 设为 <code>No Auth</code>；脚本里还会 remove 掉 <code>Authorization</code> 与 <code>X-Lingee-OpenApi-User-Id</code>，防止继承到目录或项目级鉴权。</p>
+
+  <h3 id="h3-20">6.2 请求头</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>请求头</th><th>要求</th></tr>
+      <tr><td><code>Authorization</code></td><td>必填，格式 <code>Bearer &lt;access_token&gt;</code>。在 Apifox 的 Auth 里选 Bearer Token，值只填 <code>{{lingee_access_token}}</code>，<strong>不要再写 Bearer 前缀</strong>。</td></tr>
+      <tr><td><code>X-Tenant-Id</code></td><td>必填，应用所属租户标识，用于网关路由，需与签发令牌时的租户一致。</td></tr>
+      <tr><td><code>Request-Id</code></td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时作为业务幂等键，须满足 16–128 位 URL-safe（<code>A-Z a-z 0-9 - _ . ~</code>）；其他 POST 不承诺基于该头幂等。不参与签名。</td></tr>
+      <tr><td><code>Content-Type</code></td><td>发送 JSON 请求体时用 <code>application/json</code>；上传附件用 <code>multipart/form-data</code>。</td></tr>
+    </table>
+  </div>
+  <p>令牌已绑定执行用户。业务请求<strong>不得</strong>再携带 <code>X-Lingee-OpenApi-*</code> 签名头或用户身份头；混用凭证会被拒绝。App Secret 不参与此阶段调用。</p>
+
+  <h3 id="h3-21">6.3 调用示例</h3>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/skills?page=1&amp;pageSize=50" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre>
+  <p>业务接口使用 <code>/work/openapi/v1</code> 前缀；令牌签发接口使用 <code>/console/openapi/v1</code> 前缀。控制台调用日志里的路径可能显示为去掉网关前缀后的形式，实际调用以对外接口地址为准。</p>
+
+  <h3 id="h3-22">6.4 令牌缓存与更新</h3>
+  <ul>
+    <li>按<strong>应用、租户、执行用户</strong>三者隔离缓存 Token，不能把某个用户的令牌用于其他用户。</li>
+    <li>默认有效期 7200 秒，按返回的 <code>expires_in</code> 或 <code>expires_at</code> 管理；建议在剩余约 10% 有效期时重新换取。</li>
+    <li>不要每笔业务请求都签发 Token。签发有默认限流：同一 appId 与来源 IP 每分钟 30 次、同一 appId 与用户标识每分钟 5 次。</li>
+    <li>收到 401 与 <code>5001233082</code> 时，先检查凭证混用，再重新换取令牌；仍失败则检查应用和用户配置。</li>
+  </ul>
+
+  <h3 id="h3-23">6.5 权限校验不是一次性开关</h3>
+  <p>AccessToken 不绕过接口授权、代理白名单和应用启停。服务端会持续校验应用状态及 Token 绑定的策略版本：应用停用或相关配置（包括 IP 白名单）变更，都会使既有令牌失效，需要重新签发。当前 Bearer 业务请求不会把本次来源 IP 与应用 IP / CIDR 白名单逐请求匹配，该白名单直接约束 HMAC 签名请求。</p>
+</section>
+
+<section id="common">
+  <h2><span class="no">7</span>通用约定</h2>
+
+  <h3 id="h3-24">7.1 统一响应信封</h3>
+  <p>除 SSE 事件流与二进制下载外，其余 JSON 接口共用同一响应信封；各接口文档只描述 <code>data</code> 部分。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>{
+  "code": "0",
+  "message": "",
+  "timestamp": 1788850520000,
+  "data": { }
+}</code></pre>
+  <div class="scroll">
+    <table>
+      <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+      <tr><td><code>code</code></td><td>string</td><td><code>"0"</code> 表示成功，其余为错误码。按字符串比较，不要转成数字。</td></tr>
+      <tr><td><code>message</code></td><td>string</td><td>提示文案，成功时通常为空。</td></tr>
+      <tr><td><code>timestamp</code></td><td>integer</td><td>服务端 epoch 毫秒。</td></tr>
+      <tr><td><code>data</code></td><td>object / array</td><td>业务数据，结构随接口而定；失败时通常为空或省略。</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-25">7.2 四条通用约定</h3>
+  <ul>
+    <li><strong>空值字段会被省略</strong>：响应中的空值字段不下发，调用方必须按「字段可能缺失」处理，不能假定字段一定存在。</li>
+    <li><strong>时间格式</strong>：普通接口统一为 ISO-8601 UTC 字符串，如 <code>2026-09-08T06:55:20Z</code>；SSE 事件内的时间为 epoch 毫秒。</li>
+    <li><strong>命名风格</strong>：请求体字段使用下划线命名（<code>session_id</code>）；分页信封内部字段沿用小驼峰（<code>pageSize</code>、<code>displayName</code>）。</li>
+    <li><strong>分页</strong>：<code>page</code> 从 1 起、缺省 1；<code>pageSize</code> 缺省 50、上限 100，超过按 100 处理且不报错。</li>
+  </ul>
+
+  <h3 id="h3-26">7.3 Request-Id 的三种语义</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>场景</th><th>是否必填</th><th>格式</th><th>语义</th></tr>
+      <tr><td>HMAC 签发请求</td><td>必填</td><td>1–128 个可打印 ASCII，首尾无空白</td><td>参与签名；格式非法返回 400 与 <code>5001233060</code></td></tr>
+      <tr><td>创建会话 / 发起对话</td><td>可选</td><td>16–128 位 URL-safe</td><td>提供时作为<strong>业务幂等键</strong>；键复用但参数不一致返回 409 与 <code>5001303002</code></td></tr>
+      <tr><td>停止会话 / 上传附件 / 触发任务</td><td>可选</td><td>同上</td><td>仅用于追踪，<strong>不承诺幂等</strong></td></tr>
+    </table>
+  </div>
+  <div class="warn">
+    常见误解：把「建议携带 Request-Id」理解成「带了这个头就天然幂等」。实际只有创建会话与发起对话两个接口把它当幂等键，其余 POST 重复提交仍会重复执行。
+  </div>
+</section>
+
+<section id="catalog">
+  <h2><span class="no">8</span>接口清单</h2>
+  <p>共 15 个接口：1 个令牌签发接口 + 14 个 Bearer 业务接口。路径为对外完整请求路径，调用时在路径前添加目标环境的 HTTPS 服务地址；路径中的花括号参数须替换为实际标识。</p>
+  <div class="scroll">
+    <table>
+      <tr><th>#</th><th>方法</th><th>接口路径</th><th>用途</th><th>接口权限码</th></tr>
+      <tr><td>1</td><td><span class="tag post">POST</span></td><td><code>/console/openapi/v1/access-tokens</code></td><td>签发 AccessToken</td><td>—</td></tr>
+      <tr><td>2</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/agents</code></td><td>查询可用智能体</td><td><code>kwork-server:lingee.resource.read.assistants</code></td></tr>
+      <tr><td>3</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/skills</code></td><td>查询可用技能</td><td><code>kwork-server:lingee.resource.read.skills</code></td></tr>
+      <tr><td>4</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/tools</code></td><td>查询可用工具</td><td><code>kwork-server:lingee.resource.read.tools</code></td></tr>
+      <tr><td>5</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/models</code></td><td>查询租户可选模型</td><td><code>kwork-server:lingee.resource.read.models</code></td></tr>
+      <tr><td>6</td><td><span class="tag post">POST</span></td><td><code>/work/openapi/v1/session</code></td><td>创建会话</td><td><code>kwork-server:lingee.session.create</code></td></tr>
+      <tr><td>7</td><td><span class="tag post">POST</span></td><td><code>/work/openapi/v1/chat</code></td><td>发起异步对话</td><td><code>kwork-server:lingee.chat.run</code></td></tr>
+      <tr><td>8</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/task/{taskId}</code></td><td>轮询对话执行结果</td><td><code>kwork-server:lingee.task.read</code></td></tr>
+      <tr><td>9</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/session/{sessionId}/event</code></td><td>订阅 SSE 实时事件</td><td><code>kwork-server:lingee.session.event</code></td></tr>
+      <tr><td>10</td><td><span class="tag post">POST</span></td><td><code>/work/openapi/v1/session/{sessionId}/stop</code></td><td>停止会话执行</td><td><code>kwork-server:lingee.chat.stop</code></td></tr>
+      <tr><td>11</td><td><span class="tag post">POST</span></td><td><code>/work/openapi/v1/session/{sessionId}/inbox</code></td><td>上传会话附件</td><td><code>kwork-server:lingee.inbox.upload</code></td></tr>
+      <tr><td>12</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/session/{sessionId}/artifact/{artifactId}</code></td><td>下载会话产物</td><td><code>kwork-server:lingee.artifact.download</code></td></tr>
+      <tr><td>13</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/scheduled-tasks</code></td><td>查询本人定时任务</td><td><code>kwork-server:lingee.scheduled.list</code></td></tr>
+      <tr><td>14</td><td><span class="tag post">POST</span></td><td><code>/work/openapi/v1/scheduled-task/trigger</code></td><td>触发定时任务执行</td><td><code>kwork-server:lingee.scheduled.trigger</code></td></tr>
+      <tr><td>15</td><td><span class="tag get">GET</span></td><td><code>/work/openapi/v1/scheduled-task/{runId}</code></td><td>查询单次任务执行结果</td><td><code>kwork-server:lingee.scheduled.run</code></td></tr>
+    </table>
+  </div>
+  <p>业务接口使用 Bearer AccessToken，并按应用授权及执行用户权限校验；令牌签发接口使用应用签名认证。接口权限码需在控制台的应用「接口授权」中开通，否则业务调用返回 403 与 <code>5001233071</code>。</p>
+</section><section id="api">
+  <h2><span class="no">9</span>接口详解</h2>
+  <p>本章按接口逐个给出路径、权限码、请求参数、请求体字段、响应字段与错误码。字段与结构由规范文件 <code>灵基开放OpenAPI-v3.openapi.json</code> 直接渲染，与导入 Apifox 的内容一致。属性值标注「示例」的取自官方文档示例，替换成目标环境真实值即可。示例请求体与示例请求默认折叠，点标题展开。</p>
+  <div class="fold-tools"><button type="button" data-fold-all="open">展开全部示例</button><button type="button" data-fold-all="close">折叠全部示例</button></div>
+<div class="api-head">
+<span class="tag post">POST</span>
+<h3 id="issueAccessToken">9.1 获取 AccessToken</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">POST /console/openapi/v1/access-tokens</p>
+<p class="meta">接口 ID：<code>issueAccessToken</code> ｜ 鉴权：No Auth（HMAC 显式请求头）</p>
+<p>用 App ID / App Secret 做本地 HMAC 签名，换取 AccessToken。这是整条链路唯一的签发接口，签发环节不需要已有令牌。</p>
+<p>签名要点：签名原文由 10 行内容以 \n 连接、末尾不加换行，第 4 行（Query）与第 9 行（User-Id）为空；BODY_SHA256 为实际发送请求体 UTF-8 字节的 SHA-256 小写十六进制；signature = hex(HMAC-SHA256(appSecret, canonical))。签名路径须与请求 URL 路径完全一致，含 /console 前缀。</p>
+<p>签名完成后不得再修改 URL、请求体或签名请求头，否则请求体哈希不匹配会返回 401 与 5001233062。本接口不携带 Authorization、X-Lingee-OpenApi-User-Id 等用户身份头。</p>
+<p>限流：同一 appId 与来源 IP 每分钟 30 次，同一 appId 与用户标识每分钟 5 次。令牌默认有效期 7200 秒，应按应用、租户、执行用户隔离缓存，不要每笔业务请求都重新签发。</p>
+
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>是</td><td>请求标识，必填并参与 HMAC 签名。1–128 个可打印 ASCII 字符，首尾不得有空白；建议使用 32 位随机十六进制字符串。由前置脚本生成。<br>示例：<code>{{lingee_request_id}}</code></td></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>X-Lingee-OpenApi-App-Id</code></td><td>Header</td><td>是</td><td>应用 App ID。（由签发前置脚本自动写入，不要手工填写。）<br>示例：<code>{{lingee_app_id}}</code></td></tr><tr><td><code>X-Lingee-OpenApi-Timestamp</code></td><td>Header</td><td>是</td><td>Unix 毫秒时间戳，与服务端偏差须在 ±300 秒内。（由签发前置脚本自动写入，不要手工填写。）<br>示例：<code>{{lingee_timestamp}}</code></td></tr><tr><td><code>X-Lingee-OpenApi-Nonce</code></td><td>Header</td><td>是</td><td>每次请求重新生成的随机值，建议长度 16–128 字符。（由签发前置脚本自动写入，不要手工填写。）<br>示例：<code>{{lingee_nonce}}</code></td></tr><tr><td><code>X-Lingee-OpenApi-Signature</code></td><td>Header</td><td>是</td><td>HMAC-SHA256 签名，小写十六进制字符串。（由签发前置脚本自动写入，不要手工填写。）<br>示例：<code>{{lingee_signature}}</code></td></tr></table></div>
+<p>请求体 <code>application/json</code>，字段如下。</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tenant_id</code></td><td>string</td><td>是</td><td>应用绑定的租户标识，必须与应用配置的租户一致。<br>示例：<code>2559609318685252608_production</code></td></tr><tr><td><code>subject_type</code></td><td>string</td><td>否</td><td>执行用户标识类型。仅白名单用户模式填写，固定用户模式不得传入。<br>示例：<code>mobile</code><br>取值：<code>mobile</code>、<code>email</code>、<code>erp_user</code></td></tr><tr><td><code>subject</code></td><td>string</td><td>否</td><td>执行用户标识：手机号、邮箱或 ERP 用户标识，长度 1–256 字符。仅白名单用户模式填写。<br>示例：<code>13800138000</code><br>最小长度 <code>1</code>；最大长度 <code>256</code></td></tr><tr><td><code>data_center_id</code></td><td>string</td><td>否</td><td>ERP 数据中心 ID。仅 subject_type 为 erp_user 时必填。</td></tr>
+</table></div>
+<details class="fold"><summary>示例请求体</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>{
+  "tenant_id": "{{lingee_tenant_id}}"
+}</code></pre></div></details>
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>签发成功。令牌明文仅本次返回。</td></tr><tr><td><code>400</code></td><td>请求参数不合法。错误码：5001233060（Request-Id 格式或长度不合法，须 1–128 个可打印 ASCII、首尾无空白）。</td></tr><tr><td><code>401</code></td><td>签名验证失败。错误码：5001233062（验签失败：核对 App Secret、签名路径、请求体字节与 10 行签名原文）、5001233063（时间戳超出 ±300 秒窗口）、5001233064（Nonce 重复使用）。</td></tr><tr><td><code>403</code></td><td>应用或用户校验失败。错误码：5001233075（代理模式、用户标识、租户或白名单不匹配；固定用户不可传 subject）、5001233065（应用未启用）、5001233066（来源 IP 不在白名单）、5001233071（接口未授权）。</td></tr><tr><td><code>429</code></td><td>触发签发限流（5001233083）。复用已有令牌，退避后重试。</td></tr><tr><td><code>503</code></td><td>鉴权服务暂不可用（5001233081），稍后重试。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>access_token</code></td><td>string</td><td>否</td><td>AccessToken 明文，业务请求中放入 Authorization: Bearer &lt;access_token&gt;。<br>示例：<code>lta_xxxxx</code></td></tr><tr><td><code>token_type</code></td><td>string</td><td>否</td><td>固定为 Bearer。<br>示例：<code>Bearer</code></td></tr><tr><td><code>expires_in</code></td><td>integer</td><td>否</td><td>剩余有效秒数，默认 7200。<br>示例：<code>7200</code></td></tr><tr><td><code>expires_at</code></td><td>string</td><td>否</td><td>UTC 绝对过期时间。<br>示例：<code>2026-09-08T12:30:00Z</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request POST \
+  "{{BASE_URL}}/console/openapi/v1/access-tokens" \
+  --header "Content-Type: application/json" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "X-Lingee-OpenApi-App-Id: {{APP_ID}}" \
+  --header "X-Lingee-OpenApi-Timestamp: {{TS_MILLIS}}" \
+  --header "X-Lingee-OpenApi-Nonce: {{NONCE}}" \
+  --header "X-Lingee-OpenApi-Signature: {{SIGNATURE}}" \
+  --header "Request-Id: {{REQUEST_ID}}" \
+  --data '{"tenant_id":"{{TENANT_ID}}"}'
+
+# 上面的四个签名头必须由本地脚本计算后填入，不能手写固定值；
+# 请求体字节一经签名即不可再修改，否则返回 401 与 5001233062。</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="listAgents">9.2 查询可用智能体</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/agents</p>
+<p class="meta">接口 ID：<code>listAgents</code> ｜ 权限码：<code>kwork-server:lingee.resource.read.assistants</code> ｜ 鉴权：Bearer Token</p>
+<p>返回当前执行用户已安装并激活的智能体，其 id 即发起对话的 assistant_id。本接口不会用空列表代替失败：503 与 5001233081 表示数据源暂不可用，据此可区分「该用户确无可用智能体」与「服务暂时不可用」。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>page</code></td><td>Query</td><td>否</td><td>页码，从 1 起，缺省 1。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>Query</td><td>否</td><td>每页条数，缺省 50，上限 100；超过按 100 处理，不报错。<br>示例：<code>50</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>成功。data 为分页信封；响应中的空值字段会被省略。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>503</code></td><td>数据源暂不可用（5001233081）。本接口不返回空列表代替失败。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>records</code></td><td>array&lt;object&gt;</td><td>否</td><td>智能体数组。</td></tr><tr><td><code>total</code></td><td>integer</td><td>否</td><td>过滤后的总条数。<br>示例：<code>1</code></td></tr><tr><td><code>page</code></td><td>integer</td><td>否</td><td>回显本次页码。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>integer</td><td>否</td><td>回显本次每页条数。<br>示例：<code>50</code></td></tr>
+</table></div>
+<p class="meta"><code>records</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>id</code></td><td>string</td><td>否</td><td>智能体标识，填入发起对话的 assistant_id。<br>示例：<code>2089566466853781506</code></td></tr><tr><td><code>name</code></td><td>string</td><td>否</td><td>智能体名称。<br>示例：<code>企业知识中心</code></td></tr><tr><td><code>displayName</code></td><td>string</td><td>否</td><td>展示名。<br>示例：<code>企业知识中心</code></td></tr><tr><td><code>description</code></td><td>string</td><td>否</td><td>描述，可能为空。<br>示例：<code>企业知识中心</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/agents?page=1&amp;pageSize=50" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="listSkills">9.3 查询可用技能</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/skills</p>
+<p class="meta">接口 ID：<code>listSkills</code> ｜ 权限码：<code>kwork-server:lingee.resource.read.skills</code> ｜ 鉴权：Bearer Token</p>
+<p>返回当前执行用户已安装的技能，不含系统全局技能。发起对话的 skill_names 须填这里的 name，误传技能 id 会被静默忽略——请求不报错，但技能不生效。503 与 5001233081 表示数据源暂不可用，不返回空列表。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>page</code></td><td>Query</td><td>否</td><td>页码，从 1 起，缺省 1。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>Query</td><td>否</td><td>每页条数，缺省 50，上限 100；超过按 100 处理，不报错。<br>示例：<code>50</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>成功。data 为分页信封；响应中的空值字段会被省略。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>503</code></td><td>数据源暂不可用（5001233081）。本接口不返回空列表代替失败。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>records</code></td><td>array&lt;object&gt;</td><td>否</td><td>技能数组。</td></tr><tr><td><code>total</code></td><td>integer</td><td>否</td><td>过滤后的总条数。<br>示例：<code>1</code></td></tr><tr><td><code>page</code></td><td>integer</td><td>否</td><td>回显本次页码。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>integer</td><td>否</td><td>回显本次每页条数。<br>示例：<code>50</code></td></tr>
+</table></div>
+<p class="meta"><code>records</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>id</code></td><td>string</td><td>否</td><td>技能标识，仅作标识用，不能填入 skill_names。<br>示例：<code>3011872366401228801</code></td></tr><tr><td><code>name</code></td><td>string</td><td>否</td><td>技能名称，填入发起对话的 skill_names。误传 id 会被静默忽略。<br>示例：<code>monthly-report</code></td></tr><tr><td><code>displayName</code></td><td>string</td><td>否</td><td>展示名。<br>示例：<code>月度报表助手</code></td></tr><tr><td><code>description</code></td><td>string</td><td>否</td><td>描述，可能为空。<br>示例：<code>按模板生成月度经营报表</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/skills?page=1&amp;pageSize=50" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="listTools">9.4 查询可用工具</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/tools</p>
+<p class="meta">接口 ID：<code>listTools</code> ｜ 权限码：<code>kwork-server:lingee.resource.read.tools</code> ｜ 鉴权：Bearer Token</p>
+<p>返回当前执行用户已安装且开关打开的工具，其 id 即发起对话 tools 数组的元素。已从工具目录下架的工具会被剔除，与控制台「已安装工具」一致；目录服务暂时不可用时保留本地视图，此时 name 与 displayName 退化为 id。</p>
+<p>列表还会包含系统内置 ERP 工具（如 Kingdee-SaaS 金蝶 SaaS），仅当该租户配置了可用的 ERP 连接器、且工具支持该连接器的产品类型时出现。这类工具无需安装，但必须由调用方自行放进 tools 才会生效——tools 一旦下发就是本轮的完整工具集。ERP 帐套的还原与选择在工具内部完成，本接口不返回帐套信息。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>page</code></td><td>Query</td><td>否</td><td>页码，从 1 起，缺省 1。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>Query</td><td>否</td><td>每页条数，缺省 50，上限 100；超过按 100 处理，不报错。<br>示例：<code>50</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>成功。data 为分页信封；响应中的空值字段会被省略。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>503</code></td><td>数据源暂不可用（5001233081）。本接口不返回空列表代替失败。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>records</code></td><td>array&lt;object&gt;</td><td>否</td><td>工具数组。</td></tr><tr><td><code>total</code></td><td>integer</td><td>否</td><td>过滤后的总条数。<br>示例：<code>1</code></td></tr><tr><td><code>page</code></td><td>integer</td><td>否</td><td>回显本次页码。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>integer</td><td>否</td><td>回显本次每页条数。<br>示例：<code>50</code></td></tr>
+</table></div>
+<p class="meta"><code>records</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>id</code></td><td>string</td><td>否</td><td>工具标识，填入发起对话的 tools 数组。系统内置 ERP 工具（如 Kingdee-SaaS）也会出现在列表中，但必须显式放进 tools 才会生效。<br>示例：<code>Kingdee-SaaS</code></td></tr><tr><td><code>name</code></td><td>string</td><td>否</td><td>工具名称；目录服务暂不可用时退化为 id。<br>示例：<code>金蝶SaaS</code></td></tr><tr><td><code>displayName</code></td><td>string</td><td>否</td><td>展示名；目录服务暂不可用时退化为 id。<br>示例：<code>金蝶SaaS</code></td></tr><tr><td><code>description</code></td><td>string</td><td>否</td><td>描述，可能为空。<br>示例：<code>Operate explicitly requested Kingdee SaaS ERP workflows.</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/tools?page=1&amp;pageSize=50" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="listModels">9.5 查询租户可选模型</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/models</p>
+<p class="meta">接口 ID：<code>listModels</code> ｜ 权限码：<code>kwork-server:lingee.resource.read.models</code> ｜ 鉴权：Bearer Token</p>
+<p>返回当前租户可选的逻辑模型，用于填写发起对话的 model。无请求参数，且不分页——可选档位量级固定在十条上下，data 直接为数组，没有 records 与 total 包装。</p>
+<p>请直接取用 id 的整体值，不要自行拼接三段：subDomain 随档位变化（同一租户下可能为 default、租户标识或 HSP_INF、STD_INF 等子领域标识），组合不匹配时服务端会回落为其他模型且不报错。</p>
+<p>当前环境未开放模型选择时返回空数组，此时请省略 model 参数由服务端使用默认模型。本接口的空数组属正常状态，与 agents/skills/tools 中「数据源不可用返回 503」的语义不同。</p>
+
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>成功。data 直接为数组，可为空数组。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 为数组：</p>
+<div class="scroll"><table>
+<caption>响应 200：data 数组元素字段</caption>
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>id</code></td><td>string</td><td>否</td><td>完整逻辑模型 ID，原样填入发起对话的 model。请整体取用，不要自行拼接三段；组合不匹配时服务端会静默回落为其他模型。<br>示例：<code>work/expert/HSP_INF</code></td></tr><tr><td><code>name</code></td><td>string</td><td>否</td><td>展示名，随 Accept-Language 变化。<br>示例：<code>专家</code></td></tr><tr><td><code>displayName</code></td><td>string</td><td>否</td><td>展示名，即档位的本地化描述。<br>示例：<code>专家</code></td></tr><tr><td><code>domain</code></td><td>string</td><td>否</td><td>领域段，OpenAPI 对话固定为 work。<br>示例：<code>work</code></td></tr><tr><td><code>modelLevel</code></td><td>string</td><td>否</td><td>档位段，如 auto、fast、deep、expert、ultra，也可能是具体模型名。<br>示例：<code>expert</code></td></tr><tr><td><code>subDomain</code></td><td>string</td><td>否</td><td>子领域段，同一租户下可能为 default、租户标识或 HSP_INF、STD_INF 等。<br>示例：<code>HSP_INF</code></td></tr><tr><td><code>modelLevelDesc</code></td><td>string</td><td>否</td><td>档位本地化描述，与 displayName 同值。<br>示例：<code>专家</code></td></tr><tr><td><code>autoRouting</code></td><td>boolean</td><td>否</td><td>仅「自动」档位返回 true，表示由服务端按问题择优路由；其余条目不返回该字段。<br>示例：<code>True</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/models" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag post">POST</span>
+<h3 id="createSession">9.6 创建会话</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">POST /work/openapi/v1/session</p>
+<p class="meta">接口 ID：<code>createSession</code> ｜ 权限码：<code>kwork-server:lingee.session.create</code> ｜ 鉴权：Bearer Token</p>
+<p>显式新建一个会话，返回的 session_id 供后续接口定位会话。订阅 SSE 前必须先显式建会话。</p>
+<p>请求体可选，允许空 body。不传 session_id 直接发起对话会自动新建会话，等价于先调用一次本接口。</p>
+<p>提供 Request-Id 时，本接口把它作为业务幂等键（16–128 位 URL-safe）。</p>
+
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+<p>请求体 <code>application/json</code>，字段如下（请求体可选，允许空 body）。</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>external_ref</code></td><td>string</td><td>否</td><td>业务键，如审批单号，用于按业务键找回会话与排障。先 trim 再判长，上限 128 字符；空白等同未传，超长返回 400 与 5001003002。<br>示例：<code>APPROVAL-2026-001</code><br>最大长度 <code>128</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求体</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>{
+  "external_ref": "APPROVAL-2026-001"
+}</code></pre></div></details>
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>创建成功。data 中的空值字段会被省略。</td></tr><tr><td><code>400</code></td><td>参数不合法。错误码：5001003002（external_ref 超 128 字符，按 trim 后长度计；或 Bearer 的 Request-Id 格式非法）。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话标识（UUID），后续接口用它定位会话。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>external_ref</code></td><td>string</td><td>否</td><td>回显业务键。<br>示例：<code>APPROVAL-2026-001</code></td></tr><tr><td><code>title</code></td><td>string</td><td>否</td><td>会话标题，首轮对话后由服务端自动生成，新建时可能为空。</td></tr><tr><td><code>active</code></td><td>boolean</td><td>否</td><td>是否有运行中的执行。<br>示例：<code>False</code></td></tr><tr><td><code>created_at</code></td><td>string</td><td>否</td><td>ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr><tr><td><code>updated_at</code></td><td>string</td><td>否</td><td>最后更新时间。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request POST \
+  "{{BASE_URL}}/work/openapi/v1/session" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "Request-Id: 8f14e45fceea167a5a36dedd4bea2543" \
+  --header "Content-Type: application/json" \
+  --data '{"external_ref":"APPROVAL-2026-001"}'</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag post">POST</span>
+<h3 id="runChat">9.7 发起异步对话</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">POST /work/openapi/v1/chat</p>
+<p class="meta">接口 ID：<code>runChat</code> ｜ 权限码：<code>kwork-server:lingee.chat.run</code> ｜ 鉴权：Bearer Token</p>
+<p>建立执行并发起生成后立即返回 HTTP 202、Retry-After: 2 与 task_id（status 为 running），不阻塞等待生成完成。</p>
+<p>【前置条件·实测】本接口要求该会话已有一路存活的 SSE 连接：必须先调用 GET /work/openapi/v1/session/{sessionId}/event 建立事件流并保持连接，再发起对话。未建立、或连接已断开时，响应体返回 code=5001093001、message="SSE 路由未注册，请先调用 sse_register"；该错误可能以 HTTP 202 返回——202 只代表请求被受理，不代表执行已启动，必须以响应体 code 是否为 "0" 判定成功。</p>
+<p>结果获取：SSE 连接会实时收到本轮流式事件；同时可用 task_id 调用「轮询对话执行结果」取终态，两者可并用。响应返回的完整 event_id 通常形如 {session_id}_{原始 token}，可能超过 91 字符，不能保证可直接作为重连参数——请保留最初提交的 token。</p>
+<p>提供 Request-Id 时作为业务幂等键（16–128 位 URL-safe）；键复用但参数不一致返回 409 与 5001303002。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>event_id</code></td><td>Query</td><td>否</td><td>显式指定 SSE 事件流标识，长度 8–91，仅允许 A-Z a-z 0-9 - _ . ~。须先用同一 event_id 建立事件流连接再发起对话，否则事件无法送达该连接；不传则由服务端生成并在响应 event_id 返回。<br>示例：<code>evt-20260908-0001</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+<p>请求体 <code>application/json</code>，字段如下。</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>query</code></td><td>string</td><td>是</td><td>用户问题，上限 20000 字符（服务端可配），超长返回 400 与 5001003002。<br>示例：<code>汇总本月销售数据并生成摘要</code><br>最大长度 <code>20000</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>目标会话 ID；缺省则自动新建会话。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>assistant_id</code></td><td>string</td><td>否</td><td>本轮生效的智能体，取值来自查询可用智能体接口的 id；缺省沿用会话当前搭档，非法值返回 403 与 5001033010。<br>示例：<code>2089566466853781506</code></td></tr><tr><td><code>skill_names</code></td><td>array&lt;string&gt;</td><td>否</td><td>技能名称列表（填 name 而非 id），取值来自查询可用技能接口。误传 id 会被静默忽略，请求不报错但技能不生效。<br>示例：<code>["monthly-report"]</code></td></tr><tr><td><code>tools</code></td><td>array&lt;string&gt;</td><td>否</td><td>本轮可用工具 ID 列表，取值来自查询可用工具接口的 id。不传表示不限制（沿用会话既有工具集）；传空数组表示本轮不使用任何工具。内置 ERP 工具（如 Kingdee-SaaS）也须显式列出才生效。<br>示例：<code>["Kingdee-SaaS"]</code></td></tr><tr><td><code>inboxs</code></td><td>array&lt;object&gt;</td><td>否</td><td>附件引用列表，取自上传会话附件接口的返回，filename 须原样回传。</td></tr><tr><td><code>model</code></td><td>string</td><td>否</td><td>逻辑模型 ID，取值来自查询租户可选模型接口的 id，形如 work/expert/HSP_INF。缺省或传 auto 使用服务端默认；必须为三段格式，否则返回 400 与 5001043005。<br>示例：<code>work/expert/HSP_INF</code></td></tr><tr><td><code>external_ref</code></td><td>string</td><td>否</td><td>业务键，仅在自动新建会话时写入；已传 session_id 时本字段不生效。上限 128 字符。<br>示例：<code>APPROVAL-2026-001</code><br>最大长度 <code>128</code></td></tr>
+</table></div>
+<p class="meta"><code>inboxs</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>inbox_id</code></td><td>string</td><td>是</td><td>附件引用 ID，取上传接口返回的 inbox_id。<br>示例：<code>inb_001</code></td></tr><tr><td><code>filename</code></td><td>string</td><td>是</td><td>文件名，必须原样回传上传接口返回的 filename（重名时带 (1) 后缀）。<br>示例：<code>报表.xlsx</code></td></tr><tr><td><code>mime</code></td><td>string</td><td>否</td><td>MIME 类型，取上传接口返回的 mime。<br>示例：<code>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求体</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>{
+  "query": "汇总本月销售数据并生成摘要",
+  "session_id": "34caa001-a5d3-4a14-98b9-54ce0cd1b245",
+  "assistant_id": "2089566466853781506",
+  "skill_names": [
+    "monthly-report"
+  ],
+  "tools": [
+    "Kingdee-SaaS"
+  ],
+  "inboxs": [
+    {
+      "inbox_id": "inb_001",
+      "filename": "报表.xlsx",
+      "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }
+  ],
+  "model": "work/expert/HSP_INF",
+  "external_ref": "APPROVAL-2026-001"
+}</code></pre></div></details>
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>202</code></td><td>已受理。异步提交后为非终态，data 仅含已确定字段。配合 Retry-After 轮询「查询对话执行结果」。
+注意：202 只表示请求已被接收，不保证执行已启动。未建立 SSE 连接时，本接口可能以 202 返回 code=5001093001（SSE 路由未注册），因此必须以响应体 code 是否为 "0" 判定成功。</td></tr><tr><td><code>400</code></td><td>参数不合法。错误码：5001003001（query 缺失）、5001003002（query 超 20000 字符，或 event_id、external_ref、Bearer Request-Id 等参数格式/长度不合法——按 message 定位字段）、5001043005（model 不是三段格式，须取自查询租户可选模型的 id）。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>403</code></td><td>无权限或资源不可用。错误码：5001033010（智能体不可用/未授权/对执行用户不可见）、5001023029（技能不可用或未授权）、5001093005（点数不足或无可用席位）、5001053004（会话已归档，不能再发消息）。</td></tr><tr><td><code>404</code></td><td>tools 中的工具未激活或未授权（5001143001）。</td></tr><tr><td><code>409</code></td><td>冲突。错误码：5001303001（该会话已有正在运行的任务）、5001303002（Request-Id 幂等键复用且参数不一致）。</td></tr><tr><td><code>429</code></td><td>并发执行数超过租户上限（5001303003），退避后重试。</td></tr><tr><td><code>500</code></td><td>服务异常（5001001001）。重试或携带 Request-Id 联系平台侧排查。</td></tr><tr><td><code>503</code></td><td>事件流未就绪（5001093001）。实测该错误也可能以 HTTP 202 + 业务码的形式返回，message 为 "SSE 路由未注册，请先调用 sse_register"。须先按「订阅 SSE 实时事件」建立并保持连接，再重新发起对话。</td></tr>
+</table></div>
+<p class="meta"><b>响应 202</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>task_id</code></td><td>string</td><td>否</td><td>本轮执行标识，用于轮询对话执行结果。<br>示例：<code>1268219805353772032</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话 ID；自动新建时为新会话的 ID。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>提交后恒为 running。<br>示例：<code>running</code><br>取值：<code>running</code></td></tr><tr><td><code>event_id</code></td><td>string</td><td>否</td><td>服务端粘性路由标识，通常形如 {session_id}_{原始 event_id token}。显式 SSE 场景请保留最初提交的 8–91 字符 token，完整返回值可能超过 91 字符，不能保证可直接作为重连参数。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245_evt-20260908-0001</code></td></tr><tr><td><code>created_at</code></td><td>string</td><td>否</td><td>ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr><tr><td><code>started_at</code></td><td>string</td><td>否</td><td>执行启动时间。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request POST \
+  "{{BASE_URL}}/work/openapi/v1/chat?event_id=evt-20260908-0001" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "Request-Id: 8f14e45fceea167a5a36dedd4bea2543" \
+  --header "Content-Type: application/json" \
+  --data '{"query":"汇总本月销售数据并生成摘要",
+        "session_id":"&lt;SESSION_ID&gt;",
+        "model":"work/expert/HSP_INF",
+        "tools":["Kingdee-SaaS"]}'</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="getChatTask">9.8 轮询对话执行结果</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/task/{taskId}</p>
+<p class="meta">接口 ID：<code>getChatTask</code> ｜ 权限码：<code>kwork-server:lingee.task.read</code> ｜ 鉴权：Bearer Token</p>
+<p>按 taskId（取自发起异步对话响应的 task_id）查询本轮结果。终态返回 200，非终态返回 202 与 Retry-After。建议轮询间隔大于 2 秒并优先遵循 Retry-After；收到终态（completed、failed、expired、stopped）即停止轮询。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>taskId</code></td><td>Path</td><td>是</td><td>本轮执行标识，取自发起异步对话响应的 task_id。<br>示例：<code>1268219805353772032</code></td></tr><tr><td><code>tool_calls</code></td><td>Query</td><td>否</td><td>是否返回工具调用明细，缺省 false。<br>示例：<code>True</code></td></tr><tr><td><code>reasoning</code></td><td>Query</td><td>否</td><td>是否返回思考过程，缺省 true。<br>示例：<code>True</code></td></tr><tr><td><code>todo</code></td><td>Query</td><td>否</td><td>是否返回任务清单，缺省 false。<br>示例：<code>True</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>终态。data 中的空值字段省略；answer、artifacts、credits 等仅终态有值。</td></tr><tr><td><code>202</code></td><td>非终态（queued 或 running）。按 Retry-After 继续轮询。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>404</code></td><td>task 不存在或不属于当前执行用户（5001053009）。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>task_id</code></td><td>string</td><td>否</td><td>本轮执行标识。<br>示例：<code>1268219805353772032</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话 ID。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>title</code></td><td>string</td><td>否</td><td>会话标题。</td></tr><tr><td><code>message_id</code></td><td>string</td><td>否</td><td>本轮 assistant 消息 ID。<br>示例：<code>msg_abc</code></td></tr><tr><td><code>answer</code></td><td>string</td><td>否</td><td>本轮最终回答；仅终态有值。<br>示例：<code>已完成汇总……</code></td></tr><tr><td><code>reasoning</code></td><td>—</td><td>否</td><td>思考过程；请求时 reasoning=true 且模型有输出时返回。结构以实际返回为准。</td></tr><tr><td><code>tool_calls</code></td><td>array&lt;object&gt;</td><td>否</td><td>工具调用明细；请求时 tool_calls=true 且本轮有工具调用时返回。</td></tr><tr><td><code>todos</code></td><td>array&lt;object&gt;</td><td>否</td><td>任务清单；请求时 todo=true 且本轮有任务清单时返回。</td></tr><tr><td><code>artifacts</code></td><td>array&lt;object&gt;</td><td>否</td><td>本轮产物；仅终态 completed 且有产物时返回。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>执行状态。completed、failed、expired、stopped 为终态，收到后停止轮询。<br>示例：<code>completed</code><br>取值：<code>queued</code>、<code>running</code>、<code>completed</code>、<code>failed</code>、<code>expired</code>、<code>stopped</code></td></tr><tr><td><code>created_at</code></td><td>string</td><td>否</td><td>ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr><tr><td><code>started_at</code></td><td>string</td><td>否</td><td>启动时间。<br>示例：<code>2026-09-08T06:55:21Z</code></td></tr><tr><td><code>completed_at</code></td><td>string</td><td>否</td><td>完成时间。<br>示例：<code>2026-09-08T06:57:39Z</code></td></tr><tr><td><code>error</code></td><td>object</td><td>否</td><td>错误详情，含 code 与 message；仅 failed、expired 时出现。</td></tr><tr><td><code>credits</code></td><td>—</td><td>否</td><td>本轮点数消耗；仅终态且已出账时返回。</td></tr><tr><td><code>event_id</code></td><td>string</td><td>否</td><td>服务端保存的粘性路由标识。显式 SSE 场景应继续使用最初提交的 event_id token。</td></tr>
+</table></div>
+<p class="meta"><code>tool_calls</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tool</code></td><td>string</td><td>否</td><td>工具标识。</td></tr><tr><td><code>call_id</code></td><td>string</td><td>否</td><td>调用标识。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>调用状态。</td></tr><tr><td><code>arguments</code></td><td>—</td><td>否</td><td>调用入参，结构随工具变化。</td></tr><tr><td><code>result</code></td><td>—</td><td>否</td><td>调用结果，结构随工具变化。</td></tr>
+</table></div>
+<p class="meta"><code>todos</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>content</code></td><td>string</td><td>否</td><td>条目内容。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>条目状态。</td></tr>
+</table></div>
+<p class="meta"><code>artifacts</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>artifact_id</code></td><td>string</td><td>否</td><td>产物标识，填入下载接口的 artifactId。<br>示例：<code>art_001</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话 ID，填入下载接口的 sessionId。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>filename</code></td><td>string</td><td>否</td><td>文件名。<br>示例：<code>经营汇总.xlsx</code></td></tr><tr><td><code>mime</code></td><td>string</td><td>否</td><td>MIME 类型。<br>示例：<code>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</code></td></tr><tr><td><code>size</code></td><td>integer</td><td>否</td><td>字节数。<br>示例：<code>20480</code></td></tr><tr><td><code>stage</code></td><td>string</td><td>否</td><td>产物阶段，如 final。<br>示例：<code>final</code></td></tr>
+</table></div>
+<p class="meta"><b>响应 202</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>task_id</code></td><td>string</td><td>否</td><td>本轮执行标识。<br>示例：<code>1268219805353772032</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话 ID。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>title</code></td><td>string</td><td>否</td><td>会话标题。</td></tr><tr><td><code>message_id</code></td><td>string</td><td>否</td><td>本轮 assistant 消息 ID。<br>示例：<code>msg_abc</code></td></tr><tr><td><code>answer</code></td><td>string</td><td>否</td><td>本轮最终回答；仅终态有值。<br>示例：<code>已完成汇总……</code></td></tr><tr><td><code>reasoning</code></td><td>—</td><td>否</td><td>思考过程；请求时 reasoning=true 且模型有输出时返回。结构以实际返回为准。</td></tr><tr><td><code>tool_calls</code></td><td>array&lt;object&gt;</td><td>否</td><td>工具调用明细；请求时 tool_calls=true 且本轮有工具调用时返回。</td></tr><tr><td><code>todos</code></td><td>array&lt;object&gt;</td><td>否</td><td>任务清单；请求时 todo=true 且本轮有任务清单时返回。</td></tr><tr><td><code>artifacts</code></td><td>array&lt;object&gt;</td><td>否</td><td>本轮产物；仅终态 completed 且有产物时返回。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>执行状态。completed、failed、expired、stopped 为终态，收到后停止轮询。<br>示例：<code>completed</code><br>取值：<code>queued</code>、<code>running</code>、<code>completed</code>、<code>failed</code>、<code>expired</code>、<code>stopped</code></td></tr><tr><td><code>created_at</code></td><td>string</td><td>否</td><td>ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr><tr><td><code>started_at</code></td><td>string</td><td>否</td><td>启动时间。<br>示例：<code>2026-09-08T06:55:21Z</code></td></tr><tr><td><code>completed_at</code></td><td>string</td><td>否</td><td>完成时间。<br>示例：<code>2026-09-08T06:57:39Z</code></td></tr><tr><td><code>error</code></td><td>object</td><td>否</td><td>错误详情，含 code 与 message；仅 failed、expired 时出现。</td></tr><tr><td><code>credits</code></td><td>—</td><td>否</td><td>本轮点数消耗；仅终态且已出账时返回。</td></tr><tr><td><code>event_id</code></td><td>string</td><td>否</td><td>服务端保存的粘性路由标识。显式 SSE 场景应继续使用最初提交的 event_id token。</td></tr>
+</table></div>
+<p class="meta"><code>tool_calls</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tool</code></td><td>string</td><td>否</td><td>工具标识。</td></tr><tr><td><code>call_id</code></td><td>string</td><td>否</td><td>调用标识。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>调用状态。</td></tr><tr><td><code>arguments</code></td><td>—</td><td>否</td><td>调用入参，结构随工具变化。</td></tr><tr><td><code>result</code></td><td>—</td><td>否</td><td>调用结果，结构随工具变化。</td></tr>
+</table></div>
+<p class="meta"><code>todos</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>content</code></td><td>string</td><td>否</td><td>条目内容。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>条目状态。</td></tr>
+</table></div>
+<p class="meta"><code>artifacts</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>artifact_id</code></td><td>string</td><td>否</td><td>产物标识，填入下载接口的 artifactId。<br>示例：<code>art_001</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话 ID，填入下载接口的 sessionId。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>filename</code></td><td>string</td><td>否</td><td>文件名。<br>示例：<code>经营汇总.xlsx</code></td></tr><tr><td><code>mime</code></td><td>string</td><td>否</td><td>MIME 类型。<br>示例：<code>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</code></td></tr><tr><td><code>size</code></td><td>integer</td><td>否</td><td>字节数。<br>示例：<code>20480</code></td></tr><tr><td><code>stage</code></td><td>string</td><td>否</td><td>产物阶段，如 final。<br>示例：<code>final</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/task/&lt;TASK_ID&gt;?tool_calls=true&amp;todo=true" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="subscribeSessionEvents">9.9 订阅 SSE 实时事件</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/session/{sessionId}/event</p>
+<p class="meta">接口 ID：<code>subscribeSessionEvents</code> ｜ 权限码：<code>kwork-server:lingee.session.event</code> ｜ 鉴权：Bearer Token</p>
+<p>以 SSE 订阅本会话的流式消息推送，事件格式与 WebUI 收到的一致。会话必须属于当前执行用户。</p>
+<p>【对话的前置条件·实测】发起异步对话前，必须先建立本连接并保持存活。未建立或连接已断开时，发起对话会返回 5001093001（SSE 路由未注册，请先调用 sse_register），该错误可能以 HTTP 202 返回。因此标准链路是：创建会话 → 建立本连接 → 发起对话 → 收流。</p>
+<p>响应 Content-Type 为 text/event-stream，不包裹统一响应信封。每条消息以 data: 加一段 JSON 开头、空行结束；事件类别由 JSON 的 type 字段区分，不依赖 SSE 的 event: 行。所有事件共用信封 { type, properties }，标识字段为小驼峰 sessionID、messageID、turnID。</p>
+<p>事件类型：server.connected、server.heartbeat、session.status、session.updated、message.updated、message.part.updated、message.part.delta、session.idle。</p>
+<p>典型顺序：server.connected → session.status(busy) → 用户 message.updated 与其 part → 可选 session.updated → assistant message.updated 与其 part 流 → session.idle → session.status(idle)。server.heartbeat 可插入任意位置。</p>
+<p>客户端处理要求：session.updated、session.idle、session.status(idle) 都可能重复，须对重复终态做幂等处理；收到同一 part 的最终快照（通常带 time.end）后以该快照的 text 覆盖本地累积值；未知事件 type、未知 part.type 或额外字段应忽略，以保持前向兼容。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>sessionId</code></td><td>Path</td><td>是</td><td>会话 ID，取自创建会话的响应。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>event_id</code></td><td>Query</td><td>是</td><td>事件流标识，长度 8–91，仅允许 A-Z a-z 0-9 - _ . ~。用于把事件订阅与后续同一 eventid 的对话绑定到同一服务实例；须先连接本接口，再用同一 event_id 发起对话。<br>示例：<code>evt-20260908-0001</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>SSE 事件流，长连接持续推送。以下为文本 part 的快照与增量示例（实际为逐行 data: 输出）。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>404</code></td><td>会话不存在或不属于当前执行用户（5001053001）。</td></tr><tr><td><code>503</code></td><td>事件流连接失效（5001093001 或 5001233081），须重新建立连接后再发起对话。</td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/session/&lt;SESSION_ID&gt;/event?event_id=evt-20260908-0001" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "Accept: text/event-stream" \
+  --no-buffer</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag post">POST</span>
+<h3 id="stopSession">9.10 停止会话执行</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">POST /work/openapi/v1/session/{sessionId}/stop</p>
+<p class="meta">接口 ID：<code>stopSession</code> ｜ 权限码：<code>kwork-server:lingee.chat.stop</code> ｜ 鉴权：Bearer Token</p>
+<p>中止会话当前进行中的一轮生成，并把活动执行置为 stopped。无 Query 参数与请求体，会话必须属于当前执行用户。</p>
+<p>会话无进行中的对话时为幂等空操作，响应 data 仅含 session_id 与 status（值为 idle）；若生成恰好已完成，则返回其真实终态，不会把 completed 改写为 stopped。</p>
+<p>本接口即使携带 Request-Id 也只用于追踪，当前不提供基于该头的业务幂等承诺。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>sessionId</code></td><td>Path</td><td>是</td><td>会话 ID，取自创建会话的响应。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>停止结果。data 结构同轮询对话执行结果，仅返回关键字段。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>404</code></td><td>会话不存在或不属于当前执行用户（5001053001）。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话 ID。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>task_id</code></td><td>string</td><td>否</td><td>被中止的执行标识；无进行中对话时不返回。<br>示例：<code>1268219805353772032</code></td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>stopped 表示已中止；idle 表示本无进行中的对话（幂等空操作）；completed 等终态表示生成已先行完成，不会把 completed 改写为 stopped。<br>示例：<code>stopped</code><br>取值：<code>stopped</code>、<code>idle</code>、<code>completed</code>、<code>failed</code>、<code>expired</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request POST \
+  "{{BASE_URL}}/work/openapi/v1/session/&lt;SESSION_ID&gt;/stop" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "Request-Id: 8f14e45fceea167a5a36dedd4bea2543"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag post">POST</span>
+<h3 id="uploadSessionAttachment">9.11 上传会话附件</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">POST /work/openapi/v1/session/{sessionId}/inbox</p>
+<p class="meta">接口 ID：<code>uploadSessionAttachment</code> ｜ 权限码：<code>kwork-server:lingee.inbox.upload</code> ｜ 鉴权：Bearer Token</p>
+<p>会话级 multipart/form-data 接口。上传后把返回的 inbox_id 与 filename 原样回传到发起对话的 inboxs。会话必须属于当前执行用户。</p>
+<p>表单字段名固定为 files，可传多个。单个文件上限 100 MB，单次请求全部文件合计上限 100 MB（均可配）；文件个数无显式上限，受合计大小约束。超限由容器层拦截，返回 413 或 400，不进入业务逻辑。</p>
+<p>注意：本接口使用表单上传，不是 JSON，也没有 body 哈希或 UNSIGNED-PAYLOAD 头要求。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>sessionId</code></td><td>Path</td><td>是</td><td>会话 ID，取自创建会话的响应。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+<p>请求体 <code>multipart/form-data</code>，字段如下。</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>files</code></td><td>array&lt;string&gt;</td><td>是</td><td>附件文件，可传多个。单个与单次合计均上限 100 MB（可配）。</td></tr>
+</table></div>
+<details class="fold"><summary>示例表单字段（multipart/form-data，可多次提交同一字段）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>files=@&lt;本地文件路径&gt;</code></pre></div></details>
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>上传成功。data 为数组，顺序与上传分片一致。</td></tr><tr><td><code>400</code></td><td>files 为空（5001003001），或文件超限被容器层拦截。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>404</code></td><td>会话不存在或不属于当前执行用户（5001053001）。</td></tr><tr><td><code>413</code></td><td>单个文件或本次请求合计超过 100 MB（可配），由容器层拦截，不进入业务逻辑。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 为数组：</p>
+<div class="scroll"><table>
+<caption>响应 200：data 数组元素字段</caption>
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>inbox_id</code></td><td>string</td><td>否</td><td>附件引用 ID，回传到发起对话的 inboxs。<br>示例：<code>inb_001</code></td></tr><tr><td><code>filename</code></td><td>string</td><td>否</td><td>落盘后的最终文件名，重名会带 (1) 后缀；回传时必须使用此值。<br>示例：<code>报表.xlsx</code></td></tr><tr><td><code>mime</code></td><td>string</td><td>否</td><td>MIME 类型。<br>示例：<code>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</code></td></tr><tr><td><code>size</code></td><td>integer</td><td>否</td><td>字节数。<br>示例：<code>20480</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request POST \
+  "{{BASE_URL}}/work/openapi/v1/session/&lt;SESSION_ID&gt;/inbox" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "Request-Id: 8f14e45fceea167a5a36dedd4bea2543" \
+  --form "files=@报表.xlsx" \
+  --form "files=@附件说明.docx"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="downloadArtifact">9.12 下载会话产物</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/session/{sessionId}/artifact/{artifactId}</p>
+<p class="meta">接口 ID：<code>downloadArtifact</code> ｜ 权限码：<code>kwork-server:lingee.artifact.download</code> ｜ 鉴权：Bearer Token</p>
+<p>下载指定会话产物的二进制内容。路径参数 sessionId 与 artifactId 取自轮询结果的 artifacts，也可取自 SSE 的 artifact 类 part。无 Query 参数与请求体。</p>
+<p>归属校验：本应用经 OpenAPI 创建的会话，以及本应用经 OpenAPI 触发的定时任务执行会话，其产物均可下载，满足其一即可；都不满足时返回 404，且不区分「不存在」与「越权」。</p>
+<p>响应不包裹统一响应信封，直接返回产物字节；文件名以 RFC 5987 编码放在 Content-Disposition 中。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>sessionId</code></td><td>Path</td><td>是</td><td>会话 ID，取自轮询结果 artifacts 中的 session_id。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>artifactId</code></td><td>Path</td><td>是</td><td>产物标识，取自轮询结果 artifacts 中的 artifact_id。<br>示例：<code>art_001</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>产物字节流，不包裹统一响应信封。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>404</code></td><td>错误码：5001053001（会话不存在或不属于当前执行用户）、5001063002（产物不存在或不属于当前会话，响应不回显 artifactId）。</td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/session/&lt;SESSION_ID&gt;/artifact/&lt;ARTIFACT_ID&gt;" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --output 经营汇总.xlsx</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="listScheduledTasks">9.13 查询本人定时任务</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/scheduled-tasks</p>
+<p class="meta">接口 ID：<code>listScheduledTasks</code> ｜ 权限码：<code>kwork-server:lingee.scheduled.list</code> ｜ 鉴权：Bearer Token</p>
+<p>返回当前执行用户创建的定时任务。定时任务三个接口都严格限定在当前执行用户维度：列表只返回该用户创建的任务，触发与查询执行记录都只允许操作本人任务。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>page</code></td><td>Query</td><td>否</td><td>页码，从 1 起，缺省 1。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>Query</td><td>否</td><td>每页条数，缺省 50，上限 100；超过按 100 处理，不报错。<br>示例：<code>50</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>成功。data 为分页信封，records 中空值或 0 值字段会被省略。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>records</code></td><td>array&lt;object&gt;</td><td>否</td><td>定时任务数组。</td></tr><tr><td><code>total</code></td><td>integer</td><td>否</td><td>过滤后的总条数。<br>示例：<code>1</code></td></tr><tr><td><code>page</code></td><td>integer</td><td>否</td><td>回显本次页码。<br>示例：<code>1</code></td></tr><tr><td><code>pageSize</code></td><td>integer</td><td>否</td><td>回显本次每页条数。<br>示例：<code>50</code></td></tr>
+</table></div>
+<p class="meta"><code>records</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>id</code></td><td>string</td><td>否</td><td>任务 ID，字符串类型以避免 JS 精度截断；触发接口的 task_id 取此值。<br>示例：<code>123456789012345678</code></td></tr><tr><td><code>name</code></td><td>string</td><td>否</td><td>任务名称，同一执行用户下唯一。<br>示例：<code>每日播报</code></td></tr><tr><td><code>prompt</code></td><td>string</td><td>否</td><td>任务执行的指令内容。<br>示例：<code>汇总昨日经营数据并生成摘要</code></td></tr><tr><td><code>plan</code></td><td>string</td><td>否</td><td>调度类型。<br>示例：<code>daily</code><br>取值：<code>once</code>、<code>interval</code>、<code>daily</code>、<code>weekly</code>、<code>monthly</code></td></tr><tr><td><code>interval_time</code></td><td>—</td><td>否</td><td>间隔值，仅 plan 为 interval 时返回；单位与类型以实际返回为准。</td></tr><tr><td><code>once_time</code></td><td>—</td><td>否</td><td>单次执行时间，仅 plan 为 once 时返回。</td></tr><tr><td><code>day_of_week</code></td><td>string</td><td>否</td><td>每周执行的星期，如 1,3,5，仅 plan 为 weekly 时返回。<br>示例：<code>1,3,5</code></td></tr><tr><td><code>day_of_month</code></td><td>string</td><td>否</td><td>每月执行的日期，如 1,15，仅 plan 为 monthly 时返回。<br>示例：<code>1,15</code></td></tr><tr><td><code>execution_time</code></td><td>string</td><td>否</td><td>每日、每周或每月的执行时刻，如 09:30。<br>示例：<code>09:30</code></td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>启停状态。<br>示例：<code>enabled</code><br>取值：<code>enabled</code>、<code>disabled</code></td></tr><tr><td><code>run_status</code></td><td>string</td><td>否</td><td>运行状态。<br>示例：<code>pending</code><br>取值：<code>idle</code>、<code>pending</code>、<code>running</code></td></tr><tr><td><code>next_fire_time</code></td><td>string</td><td>否</td><td>下次触发时间，无后续触发时省略。<br>示例：<code>2026-09-09T01:30:00Z</code></td></tr><tr><td><code>last_fire_time</code></td><td>string</td><td>否</td><td>上次触发时间，从未触发时省略。</td></tr><tr><td><code>created_at</code></td><td>string</td><td>否</td><td>ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr><tr><td><code>updated_at</code></td><td>string</td><td>否</td><td>最后更新时间。<br>示例：<code>2026-09-07T08:00:00Z</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/scheduled-tasks?page=1&amp;pageSize=50" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag post">POST</span>
+<h3 id="triggerScheduledTask">9.14 触发定时任务执行</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">POST /work/openapi/v1/scheduled-task/trigger</p>
+<p class="meta">接口 ID：<code>triggerScheduledTask</code> ｜ 权限码：<code>kwork-server:lingee.scheduled.trigger</code> ｜ 鉴权：Bearer Token</p>
+<p>入队一条手动执行记录并把任务运行状态置为 running 后立即返回，不阻塞等待任务实际执行完成；随后用响应的 run_id 查询单次任务执行结果轮询终态。</p>
+<p>task_id 与 task_name 必须恰好给一个，都给或都不给返回 400。推荐使用 task_id：名称可被用户改动，且同名任务并发创建时无法唯一定位。</p>
+<p>Bearer 调用时 Request-Id 不是鉴权必填项，建议携带用于追踪；本接口不承诺基于 Request-Id 幂等。</p>
+
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+<p>请求体 <code>application/json</code>，字段如下。</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>task_id</code></td><td>string</td><td>否</td><td>任务 ID，取自查询本人定时任务的 id。与 task_name 二选一。<br>示例：<code>123456789012345678</code></td></tr><tr><td><code>task_name</code></td><td>string</td><td>否</td><td>任务名称，同一执行用户下唯一，上限 256 字符（按 trim 后长度计）。与 task_id 二选一。<br>最大长度 <code>256</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求体</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>{
+  "task_id": "123456789012345678"
+}</code></pre></div></details>
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>已入队。data 中的 run_id 用于轮询执行结果。</td></tr><tr><td><code>400</code></td><td>参数不合法。错误码：5001003002（task_id 与 task_name 未恰好给一个，或 task_name 超 256 字符）。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>403</code></td><td>错误码：5001113008（任务不属于当前执行用户）、5001093005（点数不足或无可用席位）。</td></tr><tr><td><code>404</code></td><td>任务不存在或不属于当前用户（5001113001）；按名称触发时表示名称无匹配。</td></tr><tr><td><code>409</code></td><td>冲突。错误码：5001113006（同名任务多于一条，无法唯一定位，改用 task_id）、5001113005（已有手动执行进行中，稍后重试）。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>task_id</code></td><td>string</td><td>否</td><td>被触发的任务 ID。<br>示例：<code>123456789012345678</code></td></tr><tr><td><code>run_id</code></td><td>string</td><td>否</td><td>本次执行记录 ID，用于查询单次任务执行结果。<br>示例：<code>223456789012345678</code></td></tr><tr><td><code>run_status</code></td><td>string</td><td>否</td><td>触发后运行状态，恒为 running。<br>示例：<code>running</code><br>取值：<code>running</code></td></tr><tr><td><code>triggered</code></td><td>boolean</td><td>否</td><td>是否已成功入队触发。<br>示例：<code>True</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request POST \
+  "{{BASE_URL}}/work/openapi/v1/scheduled-task/trigger" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "Request-Id: 8f14e45fceea167a5a36dedd4bea2543" \
+  --header "Content-Type: application/json" \
+  --data '{"task_id":"123456789012345678"}'</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+<div class="api-head">
+<span class="tag get">GET</span>
+<h3 id="getScheduledTaskRun">9.15 查询单次任务执行结果</h3>
+</div>
+<p class="path" style="font:13px/1.6 Consolas,monospace;color:#22364f;background:#f1f5fa;border:1px solid #d7e2f0;border-radius:6px;padding:6px 11px;display:inline-block;margin:6px 0 4px">GET /work/openapi/v1/scheduled-task/{runId}</p>
+<p class="meta">接口 ID：<code>getScheduledTaskRun</code> ｜ 权限码：<code>kwork-server:lingee.scheduled.run</code> ｜ 鉴权：Bearer Token</p>
+<p>按 runId（取自触发定时任务的响应 run_id）查询该次执行结果，供轮询终态。运行中和终态均返回 HTTP 200，不返回 202，也不设置 Retry-After；调用方须根据 data.status 判断是否继续轮询。</p>
+<p>记录所属任务必须属于当前执行用户：记录不存在返回 404，非本人任务返回 403。</p>
+<h4>请求参数</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>runId</code></td><td>Path</td><td>是</td><td>本次执行记录 ID，取自触发定时任务的响应 run_id。<br>示例：<code>223456789012345678</code></td></tr><tr><td><code>tool_calls</code></td><td>Query</td><td>否</td><td>是否返回工具调用明细，缺省 false。<br>示例：<code>True</code></td></tr><tr><td><code>reasoning</code></td><td>Query</td><td>否</td><td>是否返回思考过程，缺省 true。<br>示例：<code>True</code></td></tr><tr><td><code>todo</code></td><td>Query</td><td>否</td><td>是否返回任务清单，缺省 false。<br>示例：<code>True</code></td></tr></table></div>
+<h4>请求头</h4><div class="scroll"><table><tr><th>参数</th><th>位置</th><th>必填</th><th>说明</th></tr><tr><td><code>X-Tenant-Id</code></td><td>Header</td><td>是</td><td>应用所属租户标识，用于网关路由。请求头本身不参与 HMAC canonical，但签发请求体中的 tenant_id 受 body 哈希保护。Bearer 调用时必须与签发时一致。<br>示例：<code>{{lingee_tenant_id}}</code></td></tr><tr><td><code>Request-Id</code></td><td>Header</td><td>否</td><td>Bearer 鉴权层不强制。建议所有 POST 携带用于追踪；仅「创建会话」与「发起异步对话」在提供时将其作为业务幂等键，须满足 16–128 位 URL-safe 格式（A-Z a-z 0-9 - _ . ~）；其他 POST 不承诺基于该头幂等。不参与签名。<br>示例：<code>{{lingee_request_id}}</code></td></tr></table></div>
+
+
+<h4>响应</h4><div class="scroll"><table>
+<tr><th>状态码</th><th>说明</th></tr>
+<tr><td><code>200</code></td><td>查询成功。运行中与终态都返回 200，按 data.status 判断是否继续轮询。</td></tr><tr><td><code>401</code></td><td>鉴权失败。错误码：5001233082（Token 无效或过期，或混用了凭证——业务请求不得携带 X-Lingee-OpenApi-* 签名头或用户身份头）。收到该码时先检查凭证混用，再重新签发令牌。签发阶段的验签类错误码（5001233062 / 5001233063 / 5001233064）只会出现在 HMAC 签名请求上，不属于本接口。</td></tr><tr><td><code>403</code></td><td>记录所属任务不属于当前执行用户（5001113008）。</td></tr><tr><td><code>404</code></td><td>错误码：5001113002（执行记录不存在）、5001113001（记录所属任务不存在或不属于当前用户）。</td></tr>
+</table></div>
+<p class="meta"><b>响应 200</b> 的 <code>data</code> 字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>task_id</code></td><td>string</td><td>否</td><td>所属定时任务 ID。<br>示例：<code>123456789012345678</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>本次执行的会话 ID。<br>示例：<code>323456789012345678</code></td></tr><tr><td><code>message_id</code></td><td>string</td><td>否</td><td>本次执行产生的 assistant 消息 ID。<br>示例：<code>423456789012345678</code></td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>执行状态。<br>示例：<code>completed</code><br>取值：<code>queued</code>、<code>running</code>、<code>completed</code>、<code>failed</code>、<code>stopped</code></td></tr><tr><td><code>answer</code></td><td>string</td><td>否</td><td>本次执行的最终回答；仅成功终态有值。<br>示例：<code>已完成本次数据播报……</code></td></tr><tr><td><code>reasoning</code></td><td>—</td><td>否</td><td>思考过程；请求时 reasoning=true 且模型有输出时返回。结构以实际返回为准。</td></tr><tr><td><code>tool_calls</code></td><td>array&lt;object&gt;</td><td>否</td><td>工具调用明细；请求时 tool_calls=true 且本次有工具调用时返回。</td></tr><tr><td><code>todos</code></td><td>array&lt;object&gt;</td><td>否</td><td>任务清单；请求时 todo=true 且本次有任务清单时返回。</td></tr><tr><td><code>credits</code></td><td>—</td><td>否</td><td>本次执行的点数消耗；仅成功终态且已出账时返回。</td></tr><tr><td><code>artifacts</code></td><td>array&lt;object&gt;</td><td>否</td><td>本次执行产生的产物列表；仅成功终态且有产物时返回。</td></tr><tr><td><code>created_at</code></td><td>string</td><td>否</td><td>ISO-8601 UTC 时间字符串，如 2026-09-08T06:55:20Z。<br>示例：<code>2026-09-08T06:55:20Z</code></td></tr><tr><td><code>started_at</code></td><td>string</td><td>否</td><td>开始执行时间，运行开始后返回。<br>示例：<code>2026-09-08T01:30:01Z</code></td></tr><tr><td><code>completed_at</code></td><td>string</td><td>否</td><td>完成时间；仅终态有值。<br>示例：<code>2026-09-08T01:30:04Z</code></td></tr><tr><td><code>error</code></td><td>object</td><td>否</td><td>错误详情，含 message；仅 failed 时出现。</td></tr>
+</table></div>
+<p class="meta"><code>tool_calls</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>tool</code></td><td>string</td><td>否</td><td>工具标识。</td></tr><tr><td><code>call_id</code></td><td>string</td><td>否</td><td>调用标识。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>调用状态。</td></tr><tr><td><code>arguments</code></td><td>—</td><td>否</td><td>调用入参，结构随工具变化。</td></tr><tr><td><code>result</code></td><td>—</td><td>否</td><td>调用结果，结构随工具变化。</td></tr>
+</table></div>
+<p class="meta"><code>todos</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>content</code></td><td>string</td><td>否</td><td>条目内容。</td></tr><tr><td><code>status</code></td><td>string</td><td>否</td><td>条目状态。</td></tr>
+</table></div>
+<p class="meta"><code>artifacts</code> 数组元素字段：</p>
+<div class="scroll"><table>
+
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>artifact_id</code></td><td>string</td><td>否</td><td>产物标识，填入下载接口的 artifactId。<br>示例：<code>art_001</code></td></tr><tr><td><code>session_id</code></td><td>string</td><td>否</td><td>会话 ID，填入下载接口的 sessionId。<br>示例：<code>34caa001-a5d3-4a14-98b9-54ce0cd1b245</code></td></tr><tr><td><code>filename</code></td><td>string</td><td>否</td><td>文件名。<br>示例：<code>经营汇总.xlsx</code></td></tr><tr><td><code>mime</code></td><td>string</td><td>否</td><td>MIME 类型。<br>示例：<code>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</code></td></tr><tr><td><code>size</code></td><td>integer</td><td>否</td><td>字节数。<br>示例：<code>20480</code></td></tr><tr><td><code>stage</code></td><td>string</td><td>否</td><td>产物阶段，如 final。<br>示例：<code>final</code></td></tr>
+</table></div>
+<details class="fold"><summary>示例请求（cURL）</summary><div class="fold-body"><pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --request GET \
+  "{{BASE_URL}}/work/openapi/v1/scheduled-task/&lt;RUN_ID&gt;?tool_calls=true" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}"</code></pre></div></details>
+<a class="top" href="#api">↑ 回到接口详解开头</a>
+</section><section id="flow">
+  <h2><span class="no">10</span>业务链路</h2>
+
+  <h3 id="h3-27">10.1 先取资源，再发对话</h3>
+  <p>发起对话的 <code>assistant_id</code>、<code>skill_names</code>、<code>tools</code>、<code>model</code> 都必须取自资源查询接口的真实返回值，不能凭名称猜。四个查询接口的分工如下。</p>
+  <div class="scroll">
+    <table>
+      <tr><th>查询接口</th><th>返回的 id 填到对话的哪里</th><th>注意</th></tr>
+      <tr><td><code>GET /work/openapi/v1/agents</code></td><td><code>assistant_id</code></td><td>只返回已激活且对执行用户可见的智能体</td></tr>
+      <tr><td><code>GET /work/openapi/v1/skills</code></td><td><code>skill_names</code> 填 <strong>name</strong></td><td>误填 id 会被静默忽略，请求不报错但技能不生效</td></tr>
+      <tr><td><code>GET /work/openapi/v1/tools</code></td><td><code>tools</code> 填 id</td><td>内置 ERP 工具（如 <code>Kingdee-SaaS</code>）也须显式列出</td></tr>
+      <tr><td><code>GET /work/openapi/v1/models</code></td><td><code>model</code> 填完整 id</td><td>空数组属正常；此时省略 <code>model</code> 用服务端默认</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-28">10.2 对话主链路</h3>
+  <p>实测链路：创建会话 → 可选上传附件 → <strong>建立 SSE 连接并保持</strong> → 发起异步对话 → 从流或轮询取结果 → 下载产物；需要中止时调用停止会话。<strong>SSE 连接不是可选项</strong>，它是发起对话的前置条件。</p>
+  <div class="scroll">
+    <table>
+      <tr><th>步骤</th><th>接口</th><th>关键取值</th></tr>
+      <tr><td>① 建会话</td><td><span class="tag post">POST</span> <code>/work/openapi/v1/session</code></td><td>响应 <code>data.session_id</code>；可带 <code>external_ref</code> 作为业务键</td></tr>
+      <tr><td>② 传附件（可选）</td><td><span class="tag post">POST</span> <code>/session/{sessionId}/inbox</code></td><td>响应数组里的 <code>inbox_id</code> + <code>filename</code> + <code>mime</code> 原样回传</td></tr>
+      <tr><td>③ <strong>建立 SSE 连接</strong><br>（必须先做）</td><td><span class="tag get">GET</span> <code>/session/{sessionId}/event?event_id=...</code></td><td><code>event_id</code> 必填、8–91 位；连接需持续存活，收到 <code>server.connected</code> 才算就绪</td></tr>
+      <tr><td>④ 发起对话</td><td><span class="tag post">POST</span> <code>/work/openapi/v1/chat</code></td><td>返回 <code>task_id</code>、<code>session_id</code>、<code>event_id</code>，HTTP 202；<strong>必须校验响应体 <code>code</code> 为 <code>"0"</code></strong></td></tr>
+      <tr><td>⑤ 取结果</td><td>SSE 流（已连接）<br><span class="tag get">GET</span> <code>/task/{taskId}</code></td><td>流里实时收；也可用 <code>task_id</code> 轮询终态，两者可并用</td></tr>
+      <tr><td>⑥ 下产物</td><td><span class="tag get">GET</span> <code>/session/{sessionId}/artifact/{artifactId}</code></td><td><code>artifacts</code> 里的 <code>session_id</code> 与 <code>artifact_id</code></td></tr>
+      <tr><td>⑦ 中止（可选）</td><td><span class="tag post">POST</span> <code>/session/{sessionId}/stop</code></td><td>返回 <code>stopped</code>；无进行中对话时返回 <code>idle</code></td></tr>
+    </table>
+  </div>
+  <div class="warn">
+    <b>跳过第 ③ 步会直接失败。</b>未建立 SSE 连接、或连接已经断开时，发起对话返回业务码 <code>5001093001</code>，message 为「SSE 路由未注册，请先调用 sse_register」。注意这个错误<strong>可能以 HTTP 202 返回</strong>——202 只代表请求被受理，不代表执行已启动，所以任何情况下都要以响应体的 <code>code</code> 是否为 <code>"0"</code> 判定成功，不能只看 HTTP 状态。
+  </div>
+  <div class="warn">
+    <b>不要依赖「不传 session_id 自动新建会话」。</b>官方文档说这种写法等价于先调用一次建会话接口，但在「发起对话前必须先有 SSE 连接」的前提下这条路走不通：你没有 <code>session_id</code> 就无法提前订阅，对话会直接返回 <code>5001093001</code>。因此必须显式建会话、再订阅、最后发起对话。
+  </div>
+
+  <h3 id="h3-29">10.3 SSE 是前置条件，轮询是终态兜底</h3>
+  <p>这两个接口常被当成「二选一」，实测不是：<strong>SSE 连接必须先建立，否则对话根本发不出去</strong>；而轮询不能替代建连，它只是取终态的另一种方式。正确的理解是两者都要、各司其职。</p>
+  <div class="scroll">
+    <table>
+      <tr><th>维度</th><th>SSE 连接 <code>GET /session/{sessionId}/event</code></th><th>轮询 <code>GET /task/{taskId}</code></th></tr>
+      <tr><td>能否省略</td><td><strong>不能</strong>，缺了对话直接失败（<code>5001093001</code>）</td><td>可以不用，SSE 流里也能拿到最终文本</td></tr>
+      <tr><td>作用</td><td>前置基础设施 + 实时增量推送</td><td>终态与结构化字段的可靠来源</td></tr>
+      <tr><td>实时性</td><td>逐字推送，可做打字机效果</td><td>取决于轮询间隔（建议 &gt; 2 秒，遵循 <code>Retry-After</code>）</td></tr>
+      <tr><td>生命周期</td><td>必须跨越整个对话周期持续存活</td><td>每次独立请求，无状态</td></tr>
+      <tr><td>断线影响</td><td>断开后需重连，否则下一轮对话失败</td><td>无影响</td></tr>
+      <tr><td>额外收益</td><td>思考过程、工具调用、产物元数据分段到达</td><td>可按 <code>tool_calls</code> / <code>todo</code> 开关取明细，字段更完整</td></tr>
+    </table>
+  </div>
+  <p>建议实现：先建 SSE 连接负责「看得见」的实时体验，同时用 <code>task_id</code> 轮询兜底终态——流断了、事件漏了，轮询都能补回来。反过来只轮询、不建连接，接口会直接拒绝。</p>
+
+  <h3 id="h3-30">10.4 定时任务链路</h3>
+  <p>定时任务三个接口严格限定在当前执行用户维度：列表只返回该用户创建的任务，触发与查询执行记录都只允许操作本人任务。</p>
+  <ol>
+    <li><code>GET /work/openapi/v1/scheduled-tasks</code> 取 <code>id</code>（字符串，避免 JS 精度截断）。</li>
+    <li><code>POST /work/openapi/v1/scheduled-task/trigger</code> 传 <code>task_id</code>（或 <code>task_name</code>，二选一），拿 <code>run_id</code>。</li>
+    <li><code>GET /work/openapi/v1/scheduled-task/{runId}</code> 轮询 <code>status</code>，直到 <code>completed</code> / <code>failed</code> / <code>stopped</code>。</li>
+    <li>若返回了 <code>artifacts</code>，用其 <code>session_id</code> + <code>artifact_id</code> 下载产物。</li>
+  </ol>
+  <div class="warn">
+    <b>与对话轮询的关键差异：</b>查询单次任务执行结果时，运行中和终态<strong>都返回 HTTP 200</strong>，不返回 202，也不设置 <code>Retry-After</code>。必须按 <code>data.status</code> 判断是否继续轮询，不能靠 HTTP 状态码判断。
+  </div>
+
+  <h3 id="h3-31">10.5 幂等与重试</h3>
+  <ul>
+    <li>只有「创建会话」与「发起异步对话」在携带 <code>Request-Id</code> 时把它当业务幂等键。重试这两个接口时<strong>复用同一个 Request-Id</strong>才能获得幂等保护；参数不一致会返回 409 与 <code>5001303002</code>。</li>
+    <li>其余 POST 接口不承诺幂等：停止会话是天然幂等的空操作，但上传附件、触发任务重复调用会重复执行，重试前应先确认上一次是否已生效。</li>
+    <li>遇到 429（<code>5001303003</code> 并发超限、<code>5001233083</code> 限流）应退避重试，不要立即重发。</li>
+  </ul>
+</section>
+
+<section id="sse">
+  <h2><span class="no">11</span>SSE 事件规范</h2>
+
+  <h3 id="h3-32">11.1 建连时序（最容易踩错的一点）</h3>
+  <p><code>event_id</code> 的作用是把「事件订阅」与「后续同一 eventid 的对话」绑定到同一服务实例。实测这条约束是硬的：<strong>发起对话前必须已有存活的 SSE 连接</strong>，连接断开后同样会失败，必须重连。<strong>收到 <code>server.connected</code> 才算真正就绪</strong>，在此之前发对话仍可能被拒。</p>
+  <p>两种常见踩坑：一是先发对话、再连 SSE，必然失败；二是连接建好后闲置过久被服务端或中间代理断开，此时再用同一会话发下一轮，仍会返回 <code>5001093001</code>——而且这一次 HTTP 状态可能是 <strong>202</strong>，很容易被误判成「提交成功」，直到发现结果一直查不出来。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>① GET  /work/openapi/v1/session/{sessionId}/event?event_id=evt-20260908-0001   ← 先连，保持连接
+② POST /work/openapi/v1/chat?event_id=evt-20260908-0001                        ← 再发，用同一个 token</code></pre>
+  <p><code>event_id</code> 长度 8–91，仅允许 <code>A-Z a-z 0-9 - _ . ~</code>。响应里返回的完整 <code>event_id</code> 通常形如 <code>{session_id}_{原始 token}</code>，可能超过 91 字符——它主要用于服务端粘性路由与排障，<strong>不能保证可直接作为重连参数</strong>。请始终保留你最初提交的那个 token。</p>
+
+  <h3 id="h3-33">11.2 报文格式</h3>
+  <p>响应 <code>Content-Type</code> 为 <code>text/event-stream</code>，服务端持续推送，不包裹统一响应信封。每条消息以 <code>data:</code> 加一段 JSON 开头、以空行结束；事件类别由 JSON 的 <code>type</code> 字段区分，<strong>不依赖</strong> SSE 的 <code>event:</code> 行。</p>
+  <p>所有事件共用信封 <code>{ type, properties }</code>，其中标识字段为小驼峰形式的 <code>sessionID</code>、<code>messageID</code>、<code>turnID</code>。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>data: {"type":"message.part.delta","properties":{"sessionID":"34caa001-...","messageID":"msg_abc","partID":"prt_text_01","field":"text","delta":"已完成"}}
+
+data: {"type":"session.idle","properties":{"sessionID":"34caa001-..."}}</code></pre>
+
+  <h3 id="h3-34">11.3 事件类型</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>事件 type</th><th>properties 关键字段</th><th>处理方式</th></tr>
+      <tr><td><code>server.connected</code></td><td>空对象</td><td>订阅已建立，不渲染为消息</td></tr>
+      <tr><td><code>server.heartbeat</code></td><td>空对象</td><td>保活事件，不渲染；可用于连接存活检测，可插入任意位置</td></tr>
+      <tr><td><code>session.status</code></td><td><code>sessionID</code>、<code>status.type</code>（busy / idle）</td><td>更新会话运行态</td></tr>
+      <tr><td><code>session.updated</code></td><td><code>sessionID</code>、<code>info.id</code>、<code>info.title</code>、<code>info.time.created</code>、<code>updated</code></td><td>同一会话可多次推送标题变化，以最后一次为准</td></tr>
+      <tr><td><code>message.updated</code></td><td><code>info.id</code>、<code>sessionID</code>、<code>turnID</code>、<code>role</code>、<code>time.created</code>；assistant 消息还可能带 <code>parentID</code>、模型、provider、agent、usage</td><td>创建或更新消息容器</td></tr>
+      <tr><td><code>message.part.updated</code></td><td><code>part</code> 完整快照</td><td>按 (<code>messageID</code>, <code>part.id</code>) 覆盖保存</td></tr>
+      <tr><td><code>message.part.delta</code></td><td><code>sessionID</code>、<code>messageID</code>、<code>partID</code>、<code>field</code>、<code>delta</code></td><td>仅 <code>field</code> 为 <code>text</code> 时，按到达顺序把 delta 追加到对应 partID</td></tr>
+      <tr><td><code>session.idle</code></td><td><code>sessionID</code></td><td>当前会话已空闲；仅当本次对话已有活动时视为当前轮结束，重复事件须幂等处理</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-35">11.4 典型事件顺序</h3>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>server.connected
+  → session.status(busy)
+  → 用户 message.updated 与其 part（有附件时含 file part）
+  → [可选] session.updated
+  → assistant message.updated 与其 part 流（reasoning / text / tool / artifact）
+  → session.idle
+  → session.status(idle)
+
+server.heartbeat 可插入任意位置</code></pre>
+
+  <h3 id="h3-36">11.5 客户端处理要求</h3>
+  <ul>
+    <li><code>session.updated</code>、<code>session.idle</code>、<code>session.status(idle)</code> 都可能重复，<strong>须对重复终态做幂等处理</strong>，避免重复存储、重复展示或重复触发回调。</li>
+    <li>收到同一 part 的最终快照（通常带 <code>time.end</code>）后，以该快照的 <code>text</code> <strong>覆盖</strong>本地累积值，而不是再次追加。</li>
+    <li>未知事件 <code>type</code>、未知 <code>part.type</code> 或额外字段应<strong>忽略</strong>，以保持前向兼容。</li>
+    <li><code>reasoning</code> 类 part 与文本结构相同，是否展示由调用方决定，但<strong>不能拼接到最终回答</strong>。</li>
+    <li><code>artifact</code> 类 part 只提供元数据（<code>artifactId</code>、<code>name</code>、<code>mime</code>、<code>size</code> 等），文件内容须用 <code>sessionId</code> 与 <code>artifactId</code> 调下载接口获取。</li>
+    <li><code>file</code> 类 part 中的 <code>url</code> 为相对资源路径，仅用于当前事件上下文识别，<strong>不是</strong>对外下载接口。</li>
+  </ul>
+
+  <h3 id="h3-37">11.6 在 Apifox 里验证 SSE</h3>
+  <p>由于对话必须先有存活连接，而 Apifox 不擅长维持长连接，实操上这样分工最省事：在一个终端里用 <code>curl --no-buffer</code> 建连并一直挂着（能持续看到事件输出），然后在 Apifox 里发「创建会话」与「发起对话」。两边用同一个 <code>session_id</code>、同一个 <code>event_id</code> 即可。</p>
+<pre><button class="copy" onclick="copyCode(this)">复制</button><code>curl --no-buffer --request GET \
+  "{{BASE_URL}}/work/openapi/v1/session/&lt;SESSION_ID&gt;/event?event_id=evt-20260908-0001" \
+  --header "Authorization: Bearer {{TOKEN}}" \
+  --header "X-Tenant-Id: {{TENANT_ID}}" \
+  --header "Accept: text/event-stream"</code></pre>
+  <p>Apifox 自己发 SSE 请求时，通常只能看到已缓冲的一段内容，用来确认「连接是否建立、是否返回 200 与 <code>text/event-stream</code>」足够，但验证增量拼接还得靠终端或后端脚本。</p>
+  <p>需要断言的业务错误：404 与 <code>5001053001</code>（会话不存在或不属于当前执行用户）、<code>5001093001</code>（路由未注册，须先建连或重连后再发起对话）。</p>
+</section>
+
+<section id="errors">
+  <h2><span class="no">12</span>错误码手册</h2>
+  <p>HTTP 状态码与业务错误码是两个维度：<strong>同一个 HTTP 状态可能对应多个业务码</strong>，同一业务含义也可能出现在不同状态里。定位时先看 HTTP 状态，再按响应 <code>message</code> 与下表锁定业务码。</p>
+
+  <h3 id="h3-38">12.1 认证与网关类（签发与 Bearer 通用）</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>HTTP</th><th>业务码</th><th>含义</th><th>处理建议</th></tr>
+      <tr><td>401</td><td><code>5001233082</code></td><td>Token 无效或过期，或混用了凭证</td><td>先检查是否误带了 <code>X-Lingee-OpenApi-*</code> 头，再重新签发</td></tr>
+      <tr><td>401</td><td><code>5001233062</code></td><td>签发验签失败</td><td>核对凭证、签名路径（含 <code>/console</code>）、请求体字节与 10 行签名原文</td></tr>
+      <tr><td>401</td><td><code>5001233063</code></td><td>时间戳过期</td><td>校准系统时钟；偏差窗口默认 ±300 秒</td></tr>
+      <tr><td>401</td><td><code>5001233064</code></td><td>Nonce 重复</td><td>每次请求重新生成随机 Nonce</td></tr>
+      <tr><td>403</td><td><code>5001233075</code></td><td>代理模式、用户标识、租户或白名单不匹配</td><td>核对代理模式；固定用户不可传 <code>subject</code></td></tr>
+      <tr><td>403</td><td><code>5001233065</code></td><td>应用未启用</td><td>控制台确认应用状态</td></tr>
+      <tr><td>403</td><td><code>5001233066</code></td><td>来源 IP 不在白名单</td><td>报备出口 IP 或临时放开 CIDR</td></tr>
+      <tr><td>403</td><td><code>5001233071</code></td><td>接口未授权</td><td>在应用「接口授权」中开通对应接口或选「全部接口」</td></tr>
+      <tr><td>429</td><td><code>5001233083</code></td><td>签发限流或接口配额</td><td>复用已有令牌，退避后重试</td></tr>
+      <tr><td>503</td><td><code>5001233081</code></td><td>鉴权服务暂不可用，或资源数据源暂不可用</td><td>稍后重试；注意资源查询接口不会用空列表代替失败</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-39">12.2 通用参数类</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>HTTP</th><th>业务码</th><th>出现位置</th><th>含义</th></tr>
+      <tr><td>400</td><td><code>5001003001</code></td><td>发起对话、上传附件</td><td>必填缺失：<code>query</code> 缺失，或 <code>files</code> 为空</td></tr>
+      <tr><td>400</td><td><code>5001003002</code></td><td>几乎全部写接口</td><td>通用「参数不合法」：<code>query</code> 超长、<code>event_id</code> / <code>external_ref</code> / <code>task_name</code> 格式或长度不合法、Bearer 的 <code>Request-Id</code> 不符合 16–128 位 URL-safe。按 <code>message</code> 中的字段名区分</td></tr>
+      <tr><td>400</td><td><code>5001233060</code></td><td>签发接口</td><td>签发的 <code>Request-Id</code> 不合法（须 1–128 个可打印 ASCII、首尾无空白）</td></tr>
+      <tr><td>409</td><td><code>5001303002</code></td><td>创建会话、发起对话</td><td><code>Request-Id</code> 幂等键复用且参数不一致</td></tr>
+      <tr><td>413 / 400</td><td>—</td><td>上传附件</td><td>单文件或单次合计超 100 MB，由容器层拦截，不进入业务逻辑</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-40">12.3 对话类</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>HTTP</th><th>业务码</th><th>含义</th><th>处理建议</th></tr>
+      <tr><td>400</td><td><code>5001043005</code></td><td><code>model</code> 不是三段格式</td><td>取值须来自模型列表的 <code>id</code>，形如 <code>work/expert/HSP_INF</code></td></tr>
+      <tr><td>403</td><td><code>5001033010</code></td><td>智能体不可用、未授权，或对执行用户不可见</td><td>换用智能体列表中对该用户可见的 <code>id</code></td></tr>
+      <tr><td>403</td><td><code>5001023029</code></td><td>技能不可用或未授权</td><td>核对技能列表与授权</td></tr>
+      <tr><td>403</td><td><code>5001093005</code></td><td>点数不足或无可用席位</td><td>联系管理员充值或扩容</td></tr>
+      <tr><td>403</td><td><code>5001053004</code></td><td>会话已归档，不能再发消息</td><td>新建会话</td></tr>
+      <tr><td>404</td><td><code>5001143001</code></td><td><code>tools</code> 中的工具未激活或未授权</td><td>核对工具列表，或从 <code>tools</code> 去掉该 id</td></tr>
+      <tr><td>404</td><td><code>5001053009</code></td><td>task 不存在或不属于当前执行用户</td><td>核对 <code>task_id</code> 与执行用户</td></tr>
+      <tr><td>404</td><td><code>5001053001</code></td><td>会话不存在或不属于当前执行用户</td><td>核对 <code>session_id</code> 与令牌绑定的执行用户</td></tr>
+      <tr><td>404</td><td><code>5001063002</code></td><td>产物不存在或不属于当前会话</td><td>响应不回显 <code>artifactId</code>；核对归属</td></tr>
+      <tr><td>409</td><td><code>5001303001</code></td><td>该会话已有正在运行的任务</td><td>先轮询或停止上一轮，再发起</td></tr>
+      <tr><td>429</td><td><code>5001303003</code></td><td>并发执行数超过租户上限</td><td>退避后重试</td></tr>
+      <tr><td>500</td><td><code>5001001001</code></td><td>服务异常</td><td>重试；持续失败携带 <code>Request-Id</code> 联系平台</td></tr>
+      <tr><td>202 / 503</td><td><code>5001093001</code></td><td>SSE 路由未注册：发起对话时该会话没有存活的 SSE 连接（含连接已断开）。message 为「SSE 路由未注册，请先调用 sse_register」</td><td>先建立或重建 SSE 连接再发起；返回 202 时更要靠响应体 <code>code</code> 判定失败</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-41">12.4 定时任务类</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>HTTP</th><th>业务码</th><th>含义</th><th>处理建议</th></tr>
+      <tr><td>404</td><td><code>5001113001</code></td><td>任务不存在或不属于当前用户；按名称触发时表示名称无匹配</td><td>用任务列表的 <code>id</code> 触发</td></tr>
+      <tr><td>403</td><td><code>5001113008</code></td><td>任务不属于当前执行用户</td><td>换用任务归属人的令牌</td></tr>
+      <tr><td>409</td><td><code>5001113006</code></td><td>同名任务多于一条，无法唯一定位</td><td>改用 <code>task_id</code></td></tr>
+      <tr><td>409</td><td><code>5001113005</code></td><td>已有手动执行进行中</td><td>稍后重试</td></tr>
+      <tr><td>404</td><td><code>5001113002</code></td><td>执行记录不存在</td><td>核对 <code>run_id</code></td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-42">12.5 定位原则</h3>
+  <ul>
+    <li><strong>鉴权通过 ≠ 有接口权限 ≠ 业务字段正确。</strong>403 与 404 常常是权限或归属问题，不是签名问题。</li>
+    <li>日志里的 404 等业务错误不必然表示鉴权失败，要结合具体业务码看。</li>
+    <li>向平台排障时提供：发生时间、接口路径、<code>Request-Id</code> 或 <code>Trace ID</code>。</li>
+  </ul>
+</section>
+
+<section id="limits">
+  <h2><span class="no">13</span>限制与限流</h2>
+
+  <h3 id="h3-43">13.1 参数长度与大小限制</h3>
+  <p>下表为服务端校验的硬限制，标注「可配」的项由部署侧配置决定，此处为默认值。</p>
+  <div class="scroll">
+    <table>
+      <tr><th>位置</th><th>参数</th><th>限制</th><th>超限表现</th></tr>
+      <tr><td>HMAC 签名请求</td><td><code>Request-Id</code></td><td>签发及数据面写请求必填；1–128 个可打印 ASCII，首尾不得有空白</td><td>400 <code>5001233060</code></td></tr>
+      <tr><td>Bearer 创建会话 / 发起对话</td><td><code>Request-Id</code></td><td>可选；提供时长度 16–128，仅允许 <code>A-Z a-z 0-9 - _ . ~</code></td><td>400 <code>5001003002</code></td></tr>
+      <tr><td>请求头</td><td><code>X-Lingee-OpenApi-Timestamp</code></td><td>与服务端偏差 ±300 秒（可配；反重放降级时收紧为 ±60 秒）</td><td>401 <code>5001233063</code></td></tr>
+      <tr><td>请求头</td><td><code>X-Lingee-OpenApi-Nonce</code></td><td>只校验非空，建议 16–128 以保证唯一性</td><td>重复使用返回 401 <code>5001233064</code></td></tr>
+      <tr><td>发起对话</td><td><code>query</code></td><td>20000 字符（可配）</td><td>400 <code>5001003002</code></td></tr>
+      <tr><td>发起对话 / 订阅事件</td><td><code>event_id</code></td><td>长度 8–91，仅允许 <code>A-Z a-z 0-9 - _ . ~</code></td><td>400 <code>5001003002</code></td></tr>
+      <tr><td>创建会话 / 发起对话</td><td><code>external_ref</code></td><td>128 字符，按 trim 后长度计</td><td>400 <code>5001003002</code></td></tr>
+      <tr><td>触发任务</td><td><code>task_name</code></td><td>256 字符，按 trim 后长度计</td><td>400 <code>5001003002</code></td></tr>
+      <tr><td>发起对话</td><td><code>skill_names</code>、<code>tools</code>、<code>inboxs</code></td><td>无条数上限，受请求体总大小约束</td><td>—</td></tr>
+      <tr><td>上传附件</td><td><code>files</code></td><td>单个文件与单次请求合计均为 100 MB（可配）</td><td>413 / 400</td></tr>
+      <tr><td>签发接口</td><td><code>subject</code></td><td>1–256 字符</td><td>400</td></tr>
+    </table>
+  </div>
+  <p class="meta">补充规则：<code>external_ref</code> 与 <code>task_name</code> 会先 trim 再判长，两端空白不占额度，落库与查询都用 trim 后的值，空串或纯空白等同未传。</p>
+  <p class="meta">为什么 <code>event_id</code> 上限是 91：服务端会把它拼成 <code>{session_id}_{event_id}</code> 用于粘性路由，落库列限长 128，<code>session_id</code> 为 36 字符 UUID，故留给调用方 91 字符。</p>
+
+  <h3 id="h3-44">13.2 限流与配额</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>维度</th><th>默认限制</th><th>超限表现</th></tr>
+      <tr><td>签发：同一 appId + 来源 IP</td><td>30 次 / 分钟</td><td>429 <code>5001233083</code></td></tr>
+      <tr><td>签发：同一 appId + 用户标识</td><td>5 次 / 分钟</td><td>429 <code>5001233083</code></td></tr>
+      <tr><td>并发执行：租户维度</td><td>超过租户上限</td><td>429 <code>5001303003</code>，退避重试</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-45">13.3 令牌时效</h3>
+  <p>默认有效期 7200 秒。应按 <code>expires_in</code> 或 <code>expires_at</code> 管理，在剩余约 10% 有效期时重新换取；不要每笔业务请求都签发。以下情况会使既有令牌失效，需重新签发：应用停用、应用配置变更（含 IP 白名单变更）、切租户、切换代理用户。</p>
+</section>
+
+<section id="trouble">
+  <h2><span class="no">14</span>排障</h2>
+
+  <h3 id="h3-46">14.1 签发返回 401</h3>
+  <ol>
+    <li>签名路径是否与请求 URL 完全一致，是否包含 <code>/console</code> 前缀。</li>
+    <li>Query 是否为空（canonical 第 4 行必须为空行）。</li>
+    <li>canonical 是否为 10 行、9 个换行，末行后无换行，第 9 行是否为空行。</li>
+    <li>时间戳是否为毫秒，与本机时钟是否偏差过大。</li>
+    <li>签名的 body 字节与实发 body 是否完全一致（是否在签名后又改了请求体或 URL）。</li>
+    <li>签名是否为小写十六进制，App Secret 是否使用了重置前的旧值。</li>
+  </ol>
+
+  <h3 id="h3-47">14.2 业务返回 401 或 Bearer 被拒</h3>
+  <ul>
+    <li>清除全部 <code>X-Lingee-OpenApi-*</code> 头，停用老旧的项目级 HMAC 脚本。</li>
+    <li>确认只有<strong>一条</strong> <code>Authorization</code>，且 Auth 组件没有重复注入。</li>
+    <li>确认 <code>X-Tenant-Id</code> 与签发令牌时的租户一致。</li>
+    <li>令牌是否已过期或被配置变更作废——直接重新签发一次。</li>
+  </ul>
+
+  <h3 id="h3-48">14.3 变量没有被替换</h3>
+  <ul>
+    <li>确认 Apifox 右上角选中的是目标环境，而不是「无环境」。</li>
+    <li>确认变量名拼写一致，是否存在同名临时变量或路径级变量覆盖了环境变量。</li>
+    <li>前置脚本里出现 <code>Body 存在未替换变量</code> 报错，通常是 Body 里写了未定义的占位符。</li>
+  </ul>
+
+  <h3 id="h3-49">14.4 签发返回 403 与 5001233075</h3>
+  <p>九成是模式与字段不匹配：固定用户模式下 Body 里多了 <code>subject_type</code> / <code>subject</code>；或白名单用户模式下 <code>subject</code> 不在白名单内；或 <code>erp_user</code> 漏了 <code>data_center_id</code>。</p>
+
+  <h3 id="h3-50">14.5 发起对话返回 5001093001</h3>
+  <p>含义很明确：<strong>这个会话当前没有存活的 SSE 连接</strong>。按顺序排查：</p>
+  <ul>
+    <li>是否在建会话之后、发对话之前调用过 <code>GET /session/{sessionId}/event?event_id=...</code>。</li>
+    <li>连接是否还在：长连接可能被服务端空闲回收或中间代理切断，发对话前应确认还能收到 <code>server.heartbeat</code>。</li>
+    <li>是否收到过 <code>server.connected</code>；没收到说明订阅尚未就绪。</li>
+    <li>是否用了「不传 session_id 自动新建会话」的写法——那种情况你没有 <code>session_id</code> 可以提前订阅，必然失败。</li>
+    <li>会话标识是否一致：订阅的是 A 会话、发对话传的是 B 会话，同样报这个错。</li>
+  </ul>
+  <p class="meta">注意该错误的 HTTP 状态可能是 <strong>202</strong>，别只看状态码就以为提交成功。</p>
+
+  <h3 id="h3-51">14.6 轮询一直停在 running</h3>
+  <ul>
+    <li>确认轮询间隔大于 2 秒，且遵循 <code>Retry-After</code>。</li>
+    <li>确认查的是同一轮 <code>task_id</code>，不是上一轮的标识。</li>
+    <li>确认 <code>status</code> 是否已是终态（<code>completed</code> / <code>failed</code> / <code>expired</code> / <code>stopped</code>）。</li>
+    <li>若返回 404 与 <code>5001053009</code>，说明 task 不属于当前执行用户。</li>
+  </ul>
+
+  <h3 id="h3-52">14.7 SSE 收不到事件</h3>
+  <ul>
+    <li>建连顺序是否颠倒（必须先连 SSE 再发对话）。</li>
+    <li><code>event_id</code> 是否严格 8–91 位且只含允许字符。</li>
+    <li>重连时是否用了响应的完整 <code>event_id</code>（可能超 91 位），应改用最初提交的 token。</li>
+    <li>客户端是否在 <code>session.idle</code> 之后才判定结束——注意它可能重复。</li>
+  </ul>
+
+  <h3 id="h3-53">14.8 用调用日志定位</h3>
+  <p>在控制台应用列表点击「调用日志」，可按接口路径、代理用户、状态、时间范围、<code>Trace ID</code> 或 <code>Request ID</code> 筛选；点击「详情」查看对应调用记录，结合 HTTP 状态与业务错误码定位。向平台报障时请附上这三样信息。</p>
+</section>
+
+<section id="appendix">
+  <h2><span class="no">15</span>附录与变更</h2>
+
+  <h3 id="h3-54">15.1 随附文件</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>文件</th><th>用途</th></tr>
+      <tr><td><code>灵基开放OpenAPI详细接入手册-v3.html</code></td><td>本手册，完整接入说明</td></tr>
+      <tr><td><code>灵基开放OpenAPI-v3.openapi.json</code></td><td>导入 Apifox 的规范文件（推荐）</td></tr>
+      <tr><td><code>灵基开放OpenAPI-v3.openapi.yaml</code></td><td>与 JSON 内容完全等价的 YAML 版，按习惯二选一导入</td></tr>
+      <tr><td><code>灵基开放OpenAPI简要调用流程.html</code></td><td>v2 时期的四步速查卡片，快速上手仍可用</td></tr>
+      <tr><td><code>默认模块.openapi.json</code></td><td>v2 规范，保留备查；与 v3 不要同时导入同一项目</td></tr>
+      <tr><td><code>灵基对话台/</code><br>（<code>server.js</code> + <code>public/index.html</code>）</td><td>独立 Node 应用（零依赖）：<code>node server.js</code> 后打开 <code>http://127.0.0.1:3000</code>。页面与接口同源，由本地服务转发 <code>/api/*</code>，因此不受 CORS 限制。支持常用连接配置切换、模型/工具/智能体选择、SSE 流式对话、本地历史会话</td></tr>
+      <tr><td><code>灵基-对话接口-导入自检.openapi.json</code></td><td>仅含对话接口的导入自检文件，用于判断 Apifox 请求体为空是文件问题还是导入方式问题</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-55">15.2 v3 相对 v2 的变化</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>项</th><th>v2</th><th>v3</th></tr>
+      <tr><td>业务 POST 请求体</td><td>统一空壳 <code>FreeFormObject</code>，无字段</td><td>按官方文档给出全部字段、必填性、长度与取值约束</td></tr>
+      <tr><td>GET 查询参数</td><td>无</td><td>补齐 <code>page</code> / <code>pageSize</code>、<code>tool_calls</code> / <code>reasoning</code> / <code>todo</code>、<code>event_id</code></td></tr>
+      <tr><td>响应结构</td><td>通用占位，无 <code>data</code> 字段</td><td>逐接口 <code>data</code> schema 与官方示例</td></tr>
+      <tr><td>错误码</td><td>无</td><td>逐接口按 HTTP 状态列出业务码与处理建议</td></tr>
+      <tr><td>发起对话的成功状态</td><td>200</td><td><strong>202</strong>（官方为异步受理，含 <code>Retry-After</code>）</td></tr>
+      <tr><td>停止会话 / 上传附件的请求体</td><td>挂了一个空 JSON body</td><td>停止会话无请求体；上传附件为 <code>multipart/form-data</code>，字段名 <code>files</code></td></tr>
+      <tr><td>签发请求的 <code>subject_type</code></td><td><code>mobile</code> / <code>email</code></td><td>增加 <code>erp_user</code>，并补 <code>data_center_id</code></td></tr>
+      <tr><td>查询结果接口</td><td>仅 200</td><td>补充 202（非终态 + <code>Retry-After</code>）</td></tr>
+      <tr><td>发起对话的前置条件</td><td>官方文档：仅在指定 <code>event_id</code> 时才要求先建事件流</td><td><strong>实测：必须先建立并保持 SSE 连接</strong>，否则返回 <code>5001093001</code>；连接断开同样失败</td></tr>
+      <tr><td>202 的语义</td><td>视为成功受理</td><td><strong>202 仅表示请求被接收</strong>，须校验响应体 <code>code</code>；路由未注册时错误码可能就藏在 202 响应里</td></tr>
+    </table>
+  </div>
+
+  <h3 id="h3-56">15.3 官方文档未明确、本规范未作假设的部分</h3>
+  <p>为了不虚构字段，以下内容保留为自由结构，仅在字段说明里标注了实际语义：</p>
+  <ul>
+    <li><code>interval_time</code>、<code>once_time</code>（定时任务调度值）的单位与类型。</li>
+    <li><code>credits</code>（点数消耗）的结构。</li>
+    <li><code>reasoning</code>（思考过程）在 JSON 接口中的具体结构；SSE 中 reasoning 属于 <code>part.type</code> 的一种。</li>
+    <li><code>tool_call</code> 的 <code>arguments</code> 与 <code>result</code> 内部结构（随工具变化）。</li>
+  </ul>
+  <p>这些字段在实际联调时按真实返回补充到规范里即可，不影响其余字段的自动补全与校验。</p>
+
+  <h3 id="h3-57">15.4 参考</h3>
+  <ul>
+    <li>官方接入指南：<a href="https://vip.kingdee.com/knowledge/888470634605847552?productLineId=44&amp;isKnowledge=2&amp;lang=zh-CN" target="_blank" rel="noopener">灵基OpenAPI_AccessToken鉴权接入指南</a></li>
+    <li><a href="https://docs.apifox.com/access-modify-request-data" target="_blank" rel="noopener">Apifox 请求读写 API</a></li>
+    <li><a href="https://docs.apifox.com/5580997m0" target="_blank" rel="noopener">Apifox pm 脚本 API</a></li>
+  </ul>
+
+  <h3 id="h3-58">15.5 版本记录</h3>
+  <div class="scroll">
+    <table>
+      <tr><th>版本</th><th>日期</th><th>说明</th></tr>
+      <tr><td>v3.1</td><td>2026-11-20</td><td>实测修订：发起对话前必须先建立并保持 SSE 连接（否则 <code>5001093001</code>）；明确 202 需校验响应体 <code>code</code>，该错误可能以 202 返回；补充 Apifox 下「终端挂 SSE + Apifox 发对话」的验证方法</td></tr>
+      <tr><td>v3.0</td><td>2026-11-20</td><td>依据官方接入指南重构为一体化手册；规范补齐 14 个业务接口的入参、出参与错误码</td></tr>
+      <tr><td>v2.0</td><td>2026-09-22</td><td>初版：签发链路、Apifox 脚本、接口清单</td></tr>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p style="margin:0 0 8px"><b>灵基 OpenAPI 详细接入手册 v3.1</b> · 2026-11-20 · 依据官方《灵基 OpenAPI 接入指南》整理，并按实测修订</p>
+  <p style="margin:0">本手册的字段说明、响应结构与错误码均来自官方文档；手册与随附规范文件由同一份数据结构生成，两者内容一致。业务接口的真实字段可能随平台版本演进，联调时以实际返回为准。</p>
+</footer>
+
+</main>
+</div>
+<script>
+function copyCode(btn){
+  const code = btn.parentElement.querySelector('code');
+  const text = code ? code.innerText : '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => { btn.innerText = '已复制'; setTimeout(() => btn.innerText = '复制', 1500); },
+      () => fallbackSelect(code)
+    );
+  } else {
+    fallbackSelect(code);
+  }
+}
+function fallbackSelect(code){
+  try{
+    const r = document.createRange();
+    r.selectNodeContents(code);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    alert('已选中代码，请按 Ctrl+C 复制');
+  }catch(e){ alert('复制失败，请手动选择代码'); }
+}
+
+// 示例折叠块：全部展开/折叠；打印时自动展开，打印后恢复
+document.querySelectorAll('[data-fold-all]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var open = this.dataset.foldAll === 'open';
+    document.querySelectorAll('details.fold').forEach(function(d){ d.open = open; });
+  });
+});
+window.addEventListener('beforeprint', function(){
+  document.querySelectorAll('details.fold').forEach(function(d){
+    if(!d.open){ d.open = true; d.dataset.reopened = '1'; }
+  });
+});
+window.addEventListener('afterprint', function(){
+  document.querySelectorAll('details.fold[data-reopened="1"]').forEach(function(d){
+    d.open = false; delete d.dataset.reopened;
+  });
+});
+</script>
+
+<script>
+(function(){
+  var aside = document.querySelector('aside.outline');
+  if(!aside) return;
+  var links = Array.prototype.slice.call(aside.querySelectorAll('a[data-target]'));
+  var targets = links.map(function(a){ return document.getElementById(a.dataset.target); });
+  var byTarget = new Map();
+  links.forEach(function(a){ byTarget.set(a.dataset.target, a); });
+
+  var nav = aside.querySelector('.outline-nav');
+
+  function setActive(id){
+    links.forEach(function(a){ a.classList.toggle('active', a.dataset.target === id); });
+    var act = byTarget.get(id);
+    if(!act || !nav) return;
+    // 只滚动侧栏自身，避免带动整页滚动
+    var r = act.getBoundingClientRect(), box = nav.getBoundingClientRect();
+    if(r.top < box.top + 8) nav.scrollTop -= (box.top + 8 - r.top);
+    else if(r.bottom > box.bottom - 8) nav.scrollTop += (r.bottom - box.bottom + 8);
+  }
+
+  var ticking = false;
+  function spy(){
+    ticking = false;
+    var y = window.scrollY + 96, best = null;
+    for(var i=0;i<targets.length;i++){
+      var el = targets[i];
+      if(!el) continue;
+      if(el.getBoundingClientRect().top + window.scrollY <= y) best = links[i].dataset.target;
+      else break;
+    }
+    if(!best && links.length) best = links[0].dataset.target;
+    if(best) setActive(best);
+  }
+  window.addEventListener('scroll', function(){
+    if(!ticking){ ticking = true; requestAnimationFrame(spy); }
+  }, {passive:true});
+
+  links.forEach(function(a){
+    a.addEventListener('click', function(){ setActive(a.dataset.target); });
+  });
+
+  // 筛选
+  var input = document.getElementById('outlineFilter');
+  if(input){
+    input.addEventListener('input', function(){
+      var q = this.value.trim().toLowerCase();
+      var l2 = Array.prototype.slice.call(aside.querySelectorAll('li[data-lvl="2"]'));
+      aside.querySelectorAll('li[data-lvl="3"]').forEach(function(li){
+        li.classList.toggle('hidden', !!q && li.dataset.text.indexOf(q) === -1);
+      });
+      l2.forEach(function(li){
+        var self = !q || (li.dataset.text || '').indexOf(q) !== -1;
+        var kids = li.querySelectorAll('li[data-lvl="3"]');
+        var kidHit = false;
+        kids.forEach(function(k){ if(!k.classList.contains('hidden')) kidHit = true; });
+        li.classList.toggle('hidden', !(self || kidHit));
+      });
+    });
+  }
+
+  spy();
+})();
+</script>
+</body>
+</html>
