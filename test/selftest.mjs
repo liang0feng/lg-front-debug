@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import { createSSEParser } from '../public/js/sse.js';
 import { renderMarkdown, renderInline, escapeHtml } from '../public/js/markdown.js';
+import { renderChartFence } from '../public/js/chart.js';
 import * as Store from '../public/js/store.js';
 
 let passed = 0;
@@ -123,6 +124,60 @@ ok('裸 URL 自动链接并剥离句末标点', () => {
 
 ok('escapeHtml 覆盖引号', () => {
   assert.equal(escapeHtml(`<a href="x">'`), '&lt;a href=&quot;x&quot;&gt;&#39;');
+});
+
+console.log('\n图表围栏');
+ok('chart 围栏渲染为 SVG 图表', () => {
+  const opt = {
+    title: { text: '销售金额对比' },
+    xAxis: { type: 'category', data: ['2025-11', '2026-11'] },
+    yAxis: { type: 'value' },
+    series: [{ name: '价税合计', type: 'bar', data: [11300, 300000] }],
+  };
+  const html = renderMarkdown('```chart\n' + JSON.stringify(opt) + '\n```');
+  assert.match(html, /chart-block/);
+  assert.match(html, /chart-svg/);
+  assert.equal((html.match(/class="cbar"/g) || []).length, 2);
+  assert.match(html, /数据表/);
+  assert.ok(!/md-code/.test(html), '不应再渲染为代码块');
+});
+
+ok('非法 chart JSON 回退为代码块', () => {
+  const html = renderMarkdown('```chart\n{ bad json\n```');
+  assert.match(html, /md-code/);
+});
+
+ok('饼图与多系列图例', () => {
+  const pie = renderChartFence(
+    JSON.stringify({ series: [{ type: 'pie', data: [{ name: 'A', value: 1 }, { name: 'B', value: 3 }] }] })
+  );
+  assert.match(pie, /chart-pie/);
+  assert.match(pie, /chart-legend/);
+  const multi = renderChartFence(
+    JSON.stringify({
+      xAxis: { type: 'category', data: ['a', 'b'] },
+      yAxis: { type: 'value' },
+      series: [
+        { name: 'S1', type: 'bar', data: [1, 2] },
+        { name: 'S2', type: 'bar', data: [2, 1] },
+      ],
+    })
+  );
+  assert.match(multi, /chart-legend/);
+  assert.equal((multi.match(/class="cbar"/g) || []).length, 4);
+});
+
+ok('图表标题转义', () => {
+  const html = renderChartFence(
+    JSON.stringify({
+      title: { text: '<img onerror=x>' },
+      xAxis: { type: 'category', data: ['a'] },
+      yAxis: { type: 'value' },
+      series: [{ name: '<b>', type: 'bar', data: [1] }],
+    })
+  );
+  assert.ok(!/<img onerror/.test(html));
+  assert.match(html, /&lt;img onerror=x&gt;/);
 });
 
 console.log('\n存储与迁移');

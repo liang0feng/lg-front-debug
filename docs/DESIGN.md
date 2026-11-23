@@ -19,6 +19,7 @@ lg-front-debug/
 │     ├─ crypto.js         SHA-256 / HMAC-SHA256 / Random（零依赖）
 │     ├─ sse.js            SSE 解析器 + 通道（fetch 流式读 + 自动重连）
 │     ├─ markdown.js       Markdown 渲染（安全转义、流式容忍）
+│     ├─ chart.js          chart 围栏 → 内联 SVG 图表
 │     ├─ store.js          会话/配置/资源缓存的持久化
 │     ├─ api.js            令牌、签名、请求、错误分类、单飞
 │     ├─ resources.js      模型/工具/智能体的缓存与刷新
@@ -200,6 +201,17 @@ cacheKey = `lg.res.v1.${base}|${tenant}|${appId}|${subject}|${subType}`
 - 回答通道：OpenAPI 没有回答工具的接口，只有 `POST /chat`。因此提交时如果当前轮次仍在运行（工具等待中），先 `POST /stop` 结束等待轮次，确认后把选择格式化为新消息发送；`_submit` 对 `5001303001` 做一次 1s 退避重试，覆盖停止尚未落地的窗口。
 - 提交成功后工具上记录 `answered` 并随消息落盘，重新打开会话显示「已提交选择」而不是空白表单。
 - 会话标题只在首条提问时生成，后续澄清回答不覆盖标题。
+
+### 5.3 图表围栏（chart / echarts）
+
+`markdown.js` 遇到 `chart` / `echarts` / `chart-json` 围栏时交给 `chart.js`，把 ECharts option 的**数据子集**渲染为内联 SVG：
+
+- 支持 `bar` / `line` / `pie`、横向条形、多系列分组、`stack`、折线面积、负值；未知系列类型直接回退为代码块，避免误读。
+- 只读取 `title / color / xAxis / yAxis / series` 等数据字段，不执行任何脚本；所有文本转义。
+- 分类色使用经过明暗两套校验的 8 色顺序（`--chart-1..8`），JSON 指定颜色时优先使用；格子/坐标文字用主题变量。
+- 标记规范：柱宽 ≤24px、数据端 4px 圆角、2px 折线、4.5px 点 + 2px 表面描边、弱化网格。
+- 交互：悬停显示系列/分类/数值；≥2 系列显示图例；提供「数据表」折叠与「复制 JSON」。
+- 流式中未闭合的围栏先显示「图表生成中…」；闭合但解析失败回退为代码块，保证原文不丢。
 - 链接统一加 `rel="noopener noreferrer" target="_blank"`；HTML 标签一律转义，不开放原始 HTML。
 
 ## 6. 移动端

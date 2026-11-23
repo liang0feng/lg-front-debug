@@ -139,7 +139,7 @@ function playStream(sessionId, eventId, task) {
       },
     });
 
-    const answer = [
+    let answer = [
       '## 模拟回答',
       '',
       '这是 **SSE 流式**输出，用来验证：',
@@ -154,6 +154,31 @@ function playStream(sessionId, eventId, task) {
       '',
       '> 来自本地 mock 服务。',
     ].join('\n');
+
+    if (/\[chart\]/.test(task.query)) {
+      answer +=
+        '\n\n```chart\n' +
+        JSON.stringify(
+          {
+            title: { text: '销售金额对比：2025年11月 vs 2026年11月（本位币：元）' },
+            tooltip: { trigger: 'axis' },
+            grid: { containLabel: true },
+            xAxis: { type: 'category', data: ['2025-11', '2026-11'] },
+            yAxis: { type: 'value' },
+            series: [
+              {
+                name: '价税合计',
+                type: 'bar',
+                data: [11300, 300000],
+                itemStyle: { color: '#4E79A7' },
+              },
+            ],
+          },
+          null,
+          2
+        ) +
+        '\n```';
+    }
 
     const chunks = answer.match(/[\s\S]{1,8}/g) || [];
     const slow = /\[slow\]/.test(task.query);

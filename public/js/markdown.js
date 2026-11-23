@@ -4,6 +4,8 @@
  * 流式容忍：未闭合的围栏按代码块渲染。
  */
 
+import { renderChartFence } from './chart.js';
+
 export function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;',
@@ -82,6 +84,13 @@ const FENCE_RE = /^\s{0,3}(`{3,}|~{3,})\s*([\w+#.-]*)\s*$/;
 
 function codeBlock(code, lang, streaming) {
   const language = (lang || '').trim();
+  // ```chart / ```echarts：解析成功后渲染为内联 SVG；失败时退回源码
+  if (/^(chart|echarts|chart-json)$/i.test(language)) {
+    const chart = renderChartFence(code);
+    if (chart) return chart;
+    // 流式中的半截 JSON 不直接暴露，先显示占位；闭合后仍非法则回退源码
+    if (streaming) return '<div class="chart-loading">图表生成中…</div>';
+  }
   const label = language || '文本';
   return (
     '<div class="md-code' + (streaming ? ' is-streaming' : '') + '">' +

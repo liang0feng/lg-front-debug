@@ -44,6 +44,18 @@
   --shadow-pop: 0 24px 60px -18px rgba(16, 24, 40, .3);
   --side-w: 292px;
   --top-h: 62px;
+
+  /* 图表分类色板（dataviz 参考色板，已通过明暗两套校验） */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #6250d6;
+  --chart-8: #e34948;
+  --chart-grid: #e6eaf2;
+  --chart-axis: #98a2b3;
 }
 
 html[data-theme="dark"] {
@@ -79,6 +91,17 @@ html[data-theme="dark"] {
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
   --shadow: 0 20px 48px -24px rgba(0, 0, 0, .8);
   --shadow-pop: 0 28px 70px -20px rgba(0, 0, 0, .85);
+
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #0ca30c;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --chart-grid: #26303f;
+  --chart-axis: #6c788c;
 }
 
 * { box-sizing: border-box; }
@@ -584,6 +607,62 @@ img { max-width: 100%; }
 .ask-card.answered { background: var(--surface-2); border-color: var(--line); }
 .ask-card.answered .ask-head { color: var(--ok); }
 .ask-answer { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; white-space: pre-wrap; }
+
+/* ---------------- 图表（chart 围栏） ---------------- */
+.chart-block {
+  position: relative;
+  margin: 4px 0 14px; padding: 12px 14px 10px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-2);
+}
+.chart-loading {
+  margin: 4px 0 14px; padding: 22px;
+  border: 1px dashed var(--line); border-radius: 12px;
+  background: var(--surface-2); color: var(--muted);
+  font-size: 12.5px; text-align: center;
+}
+.chart-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+.chart-kicker {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 999px; padding: 1px 8px;
+}
+.chart-series { font-size: 11.5px; color: var(--muted); }
+.chart-copy { margin-left: auto; font-size: 11px; }
+.chart-title { margin: 2px 0 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.chart-scroll { overflow-x: auto; overflow-y: hidden; }
+.chart-svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.chart-svg text { font-family: var(--font); font-size: 11px; fill: var(--chart-axis); }
+.chart-svg .chart-grid line { stroke: var(--chart-grid); stroke-width: 1; shape-rendering: crispEdges; }
+.chart-svg .chart-zero { stroke: color-mix(in srgb, var(--chart-axis) 55%, transparent); stroke-width: 1; }
+.chart-svg .chart-labels text { fill: var(--ink-2); font-size: 11px; font-weight: 600; }
+.chart-svg [data-chart-tip] { transition: opacity .12s; cursor: default; }
+.chart-svg [data-chart-tip]:hover { opacity: .85; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
+.chart-key { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); }
+.chart-key i { width: 9px; height: 9px; border-radius: 3px; flex: 0 0 9px; }
+.chart-key em { font-style: normal; color: var(--muted); }
+.chart-data { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.chart-data > summary {
+  cursor: pointer; list-style: none; font-size: 11.5px;
+  color: var(--muted); user-select: none;
+}
+.chart-data > summary::-webkit-details-marker { display: none; }
+.chart-data > summary::before {
+  content: "▸"; display: inline-block; margin-right: 6px; transition: transform .15s;
+}
+.chart-data[open] > summary::before { transform: rotate(90deg); }
+.chart-data table { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 11.5px; }
+.chart-data th, .chart-data td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; }
+.chart-data th { color: var(--muted); font-weight: 600; }
+.chart-data td { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.chart-tip {
+  position: absolute; z-index: 5; pointer-events: none;
+  max-width: 240px; padding: 6px 9px; border-radius: 7px;
+  background: #17233a; color: #f2f6ff; font-size: 11.5px; line-height: 1.5;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, .5);
+}
+.chart-tip[hidden] { display: none; }
 .msg-error {
   margin: 2px 0 10px; padding: 9px 11px;
   border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--line));

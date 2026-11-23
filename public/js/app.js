@@ -2103,6 +2103,16 @@ function bindEvents() {
       if (card) submitAsk(card.dataset.askTool, card);
       return;
     }
+    const chartCopy = e.target.closest('[data-chart-copy]');
+    if (chartCopy) {
+      const block = chartCopy.closest('.chart-block');
+      copyText(block ? block.dataset.chartSrc || '' : '');
+      chartCopy.textContent = '已复制';
+      setTimeout(() => {
+        chartCopy.textContent = '复制 JSON';
+      }, 1400);
+      return;
+    }
     const copyCode = e.target.closest('[data-copy-code]');
     if (copyCode) {
       const code = copyCode.closest('.md-code').querySelector('code');
@@ -2170,6 +2180,41 @@ function bindEvents() {
     if (!e.target.classList.contains('ask-custom')) return;
     const card = e.target.closest('.ask-card');
     if (card) syncAskSelection(card);
+  });
+
+  // 图表悬停提示
+  let activeChartTip = null;
+  $('#chat').addEventListener('mousemove', (e) => {
+    const mark = e.target.closest('[data-chart-tip]');
+    if (!mark) {
+      if (activeChartTip) {
+        activeChartTip.hidden = true;
+        activeChartTip = null;
+      }
+      return;
+    }
+    const block = mark.closest('.chart-block');
+    const tip = block && block.querySelector('.chart-tip');
+    if (!tip) return;
+    if (activeChartTip && activeChartTip !== tip) activeChartTip.hidden = true;
+    activeChartTip = tip;
+    tip.textContent = mark.getAttribute('data-chart-tip');
+    tip.hidden = false;
+    const r = block.getBoundingClientRect();
+    const tw = tip.offsetWidth || 180;
+    const th = tip.offsetHeight || 32;
+    let left = e.clientX - r.left + 12;
+    let top = e.clientY - r.top + 14;
+    if (left + tw > r.width - 8) left = Math.max(8, r.width - tw - 8);
+    if (top + th > r.height - 6) top = Math.max(6, top - th - 22);
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  });
+  $('#chat').addEventListener('mouseleave', () => {
+    if (activeChartTip) {
+      activeChartTip.hidden = true;
+      activeChartTip = null;
+    }
   });
 
   // 问答示例
